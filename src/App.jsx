@@ -19,7 +19,14 @@ import {
   CheckCircle2,
   Upload,
   Award,
-  AlertCircle
+  AlertCircle,
+  Home as HomeIcon,
+  Trash2,
+  Edit3,
+  FileSpreadsheet,
+  Check,
+  X,
+  FileCheck
 } from 'lucide-react';
 import QuizModule from './components/QuizModule';
 import AssignmentUpload from './components/AssignmentUpload';
@@ -36,11 +43,11 @@ import {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('courses');
+  const [activeTab, setActiveTab] = useState('home');
   const [showAuthModal, setShowAuthModal] = useState(true);
   
   // Auth Form State
-  const [authMode, setAuthMode] = useState('signup'); // 'signup' or 'signin'
+  const [authMode, setAuthMode] = useState('signup'); 
   const [selectedRole, setSelectedRole] = useState('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,65 +56,87 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Student Registry
-  const [studentRegistry, setStudentRegistry] = useState([
-    { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', verified: true },
-    { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', verified: true },
-    { id: 3, name: 'Tariq Khan', roll: 'UOT-2024-CS-15', email: 'tariq@gmail.com', verified: false }
-  ]);
+  // Search Queries
+  const [searchQuery, setSearchQuery] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
 
-  // Master Courses Database (Teacher-isolated)
+  // 6. Teacher Notification Hub
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'New Submission', text: 'Bilal Ahmed submitted Assignment 1 (CS-401)', time: '10 mins ago', read: false },
+    { id: 2, title: 'Roll Approval Request', text: 'Tariq Khan registered with UOT-2024-CS-15', time: '1 hour ago', read: false }
+  ]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // 10. Master Student Database (Search, Update, Delete)
+  const [studentsList, setStudentsList] = useState([
+    { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', courseCode: 'CS-401', marks: '88/100', verified: true },
+    { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', courseCode: 'CS-401', marks: '92/100', verified: true },
+    { id: 3, name: 'Tariq Khan', roll: 'UOT-2024-CS-15', email: 'tariq@gmail.com', courseCode: 'SE-302', marks: '75/100', verified: false }
+  ]);
+  const [editingStudentId, setEditingStudentId] = useState(null);
+  const [editStudentMarks, setEditStudentMarks] = useState('');
+
+  // Master Courses Database
   const [allCourses, setAllCourses] = useState([
     { 
       id: 1, 
       title: 'Web Application Development', 
       code: 'CS-401', 
-      students: 45, 
+      studentsCount: 45, 
       instructorEmail: 'amir.nawaz@uot.edu.pk',
       instructor: 'Mr. Amir Nawaz',
       attendance: [
         { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', status: 'Present' },
-        { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', status: 'Present' },
+        { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', status: 'Late' },
         { id: 3, name: 'Tariq Khan', roll: 'UOT-2023-CS-03', status: 'Absent' }
       ],
       lectures: [
-        { id: 1, title: 'Week 1: React & Vite Setup.pdf', date: 'Nov 2026', size: '2.4 MB' }
+        { id: 1, title: 'React Architecture Overview', fileType: 'pdf', fileName: 'React_Arch.pdf', date: 'Nov 2026', size: '2.4 MB' },
+        { id: 2, title: 'Vite & Tailwind Setup Slides', fileType: 'slides', fileName: 'Setup_Slides.pptx', date: 'Nov 2026', size: '4.8 MB' }
       ],
       notices: [
         { id: 1, title: 'CS-401 Midterm Schedule', content: 'Midterm quiz will cover React Basics.', date: 'Today' }
       ],
       presentations: [
-        { id: 1, groupName: 'Alpha Team', topic: 'React State Management', members: 'Bilal, Ayesha', marks: '85/100' }
+        { id: 1, groupNumber: 'Group 01', groupName: 'Alpha Team', topic: 'State Management in LMS', members: 'Bilal Ahmed, Ayesha Baloch', marks: '85/100' }
       ]
     },
     { 
       id: 2, 
       title: 'Software Engineering Principles', 
       code: 'SE-302', 
-      students: 38, 
+      studentsCount: 38, 
       instructorEmail: 'mahnaz.baloch@uot.edu.pk',
       instructor: 'Dr. Mahnaz Baloch',
       attendance: [],
       lectures: [
-        { id: 1, title: 'Week 1: Software Lifecycles.pdf', date: 'Nov 2026', size: '3.1 MB' }
+        { id: 1, title: 'Software Requirement Docs Guide', fileType: 'docx', fileName: 'SRS_Guide.docx', date: 'Nov 2026', size: '1.2 MB' }
       ],
-      notices: [
-        { id: 1, title: 'SE-302 Project Group Deadline', content: 'Submit your SRS document by Friday.', date: 'Yesterday' }
-      ],
+      notices: [],
       presentations: []
     }
   ]);
+
+  // 5. Assignments with Countdown Timers
+  const [assignments, setAssignments] = useState([
+    { id: 1, courseCode: 'CS-401', title: 'Assignment 1: Component State Design', deadline: '2026-11-28T23:59', totalMarks: 100 },
+    { id: 2, courseCode: 'SE-302', title: 'Assignment 2: System Architecture Diagram', deadline: '2026-11-30T17:00', totalMarks: 50 }
+  ]);
+  const [newAssignmentTitle, setNewAssignmentTitle] = useState('');
+  const [newAssignmentDeadline, setNewAssignmentDeadline] = useState('');
 
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseCode, setNewCourseCode] = useState('');
 
-  // Course-scoped Module Inputs
+  // Lecture Upload State
   const [newLectureTitle, setNewLectureTitle] = useState('');
-  const [newNoticeTitle, setNewNoticeTitle] = useState('');
-  const [newNoticeContent, setNewNoticeContent] = useState('');
-  const [newGroup, setNewGroup] = useState('');
+  const [newLectureFileType, setNewLectureFileType] = useState('pdf');
+
+  // Presentation State
+  const [newGroupNum, setNewGroupNum] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
   const [newTopic, setNewTopic] = useState('');
   const [newMembers, setNewMembers] = useState('');
 
@@ -117,14 +146,14 @@ export default function App() {
     if (userEmail === MASTER_ADMIN_EMAIL) return { authorized: true, role: 'teacher' };
     if (role === 'teacher') {
       const isOfficial = userEmail.endsWith('@uot.edu.pk');
-      return { authorized: isOfficial, role: 'teacher', error: isOfficial ? null : "Teachers must use an official @uot.edu.pk email address." };
+      return { authorized: isOfficial, role: 'teacher', error: isOfficial ? null : "Teachers must use an official @uot.edu.pk email." };
     }
     if (role === 'student') {
       const hasRoll = roll && roll.trim().toUpperCase().startsWith('UOT-');
       return { 
         authorized: hasRoll, 
         role: 'student', 
-        error: hasRoll ? null : "Invalid Roll Number! Students must provide a valid UoT Roll No (e.g. UOT-2024-CS-01)." 
+        error: hasRoll ? null : "Invalid Roll Number! Enter a valid UoT Roll No (e.g. UOT-2024-CS-01)." 
       };
     }
     return { authorized: false, role: 'student', error: 'Unauthorized login attempt.' };
@@ -159,7 +188,7 @@ export default function App() {
       const isTeacher = result.user.email.endsWith('@uot.edu.pk') || result.user.email === MASTER_ADMIN_EMAIL;
       
       if (!isTeacher && selectedRole === 'student' && (!rollNumber || !rollNumber.trim().toUpperCase().startsWith('UOT-'))) {
-        setAuthError("Google Auth successful! Enter your UoT Roll No (e.g. UOT-2024-CS-01) to finalize.");
+        setAuthError("Google Auth successful! Enter your UoT Roll No (e.g. UOT-2024-CS-01) to finish.");
         return;
       }
     } catch (error) {
@@ -191,11 +220,13 @@ export default function App() {
         await updateProfile(userCredential.user, { displayName: name });
         
         if (selectedRole === 'student') {
-          setStudentRegistry(prev => [...prev, {
-            id: prev.length + 1,
+          setStudentsList(prev => [...prev, {
+            id: Date.now(),
             name: name,
             roll: rollNumber.toUpperCase(),
             email: email,
+            courseCode: 'CS-401',
+            marks: 'Pending',
             verified: true
           }]);
         }
@@ -249,14 +280,71 @@ export default function App() {
 
   const activeCourse = visibleCourses.find(c => c.id === selectedCourseId) || visibleCourses[0];
 
+  // 2. Attendance Status Toggle (Present, Absent, Leave, Late)
+  const toggleAttendanceStatus = (studentId) => {
+    if (!activeCourse) return;
+    const statuses = ['Present', 'Absent', 'Leave', 'Late'];
+    
+    setAllCourses(allCourses.map(c => {
+      if (c.id === activeCourse.id) {
+        const updatedAttendance = c.attendance.map(st => {
+          if (st.id === studentId) {
+            const nextIdx = (statuses.indexOf(st.status) + 1) % statuses.length;
+            return { ...st, status: statuses[nextIdx] };
+          }
+          return st;
+        });
+        return { ...c, attendance: updatedAttendance };
+      }
+      return c;
+    }));
+  };
+
+  // 2. Export & Import CSV Attendance
+  const exportAttendanceCSV = () => {
+    if (!activeCourse) return;
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      ["Roll No,Student Name,Status"]
+      .concat((activeCourse.attendance || []).map(row => `${row.roll},${row.name},${row.status}`))
+      .join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${activeCourse.code}_Attendance_Report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeCourse) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target.result;
+      const lines = text.split("\n").slice(1);
+      const importedData = lines.filter(l => l.trim()).map((l, idx) => {
+        const [roll, name, status] = l.split(",");
+        return { id: Date.now() + idx, roll: roll?.trim(), name: name?.trim(), status: status?.trim() || 'Present' };
+      });
+      setAllCourses(allCourses.map(c => c.id === activeCourse.id ? { ...c, attendance: importedData } : c));
+      alert(`Imported ${importedData.length} student attendance records!`);
+    };
+    reader.readAsText(file);
+  };
+
+  // 4 & 8. Upload PDF/Slides/Word Docs
   const handleAddLecture = (e) => {
     e.preventDefault();
     if (!newLectureTitle || !activeCourse) return;
+    const ext = newLectureFileType === 'pdf' ? '.pdf' : newLectureFileType === 'slides' ? '.pptx' : '.docx';
     const newLec = {
       id: Date.now(),
-      title: newLectureTitle.endsWith('.pdf') ? newLectureTitle : `${newLectureTitle}.pdf`,
+      title: newLectureTitle,
+      fileType: newLectureFileType,
+      fileName: `${newLectureTitle.replace(/\s+/g, '_')}${ext}`,
       date: 'Just Now',
-      size: '1.8 MB'
+      size: '2.1 MB'
     };
     
     setAllCourses(allCourses.map(c => 
@@ -267,33 +355,41 @@ export default function App() {
     setNewLectureTitle('');
   };
 
-  const handleAddNotice = (e) => {
-    e.preventDefault();
-    if (!newNoticeTitle || !newNoticeContent || !activeCourse) return;
-    const newNot = {
-      id: Date.now(),
-      title: newNoticeTitle,
-      content: newNoticeContent,
-      date: 'Just Now'
-    };
-
-    setAllCourses(allCourses.map(c => 
-      c.id === activeCourse.id 
-        ? { ...c, notices: [...(c.notices || []), newNot] }
-        : c
-    ));
-    setNewNoticeTitle('');
-    setNewNoticeContent('');
+  // 5. Assignment Deadline Timer Calculator
+  const calculateTimeRemaining = (deadlineStr) => {
+    const total = Date.parse(deadlineStr) - Date.parse(new Date());
+    if (total <= 0) return { expired: true, text: 'Deadline Passed' };
+    const hours = Math.floor((total / (1000 * 60 * 60)));
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return { expired: false, text: `${days}d ${remHours}h remaining` };
   };
 
-  const handleAddPresentation = (e) => {
+  const handleCreateAssignment = (e) => {
     e.preventDefault();
-    if (!newGroup || !newTopic || !activeCourse) return;
+    if (!newAssignmentTitle || !newAssignmentDeadline || !activeCourse) return;
+    const newAssign = {
+      id: Date.now(),
+      courseCode: activeCourse.code,
+      title: newAssignmentTitle,
+      deadline: newAssignmentDeadline,
+      totalMarks: 100
+    };
+    setAssignments([...assignments, newAssign]);
+    setNewAssignmentTitle('');
+    setNewAssignmentDeadline('');
+  };
+
+  // 7. Presentation Group Creation & Live Grading
+  const handleAddPresentationGroup = (e) => {
+    e.preventDefault();
+    if (!newGroupName || !newTopic || !activeCourse) return;
     const newPres = {
       id: Date.now(),
-      groupName: newGroup,
+      groupNumber: newGroupNum || `Group 0${(activeCourse.presentations?.length || 0) + 1}`,
+      groupName: newGroupName,
       topic: newTopic,
-      members: newMembers || 'Enrolled Students',
+      members: newMembers || 'Assigned Students',
       marks: 'Pending Evaluation'
     };
 
@@ -302,24 +398,32 @@ export default function App() {
         ? { ...c, presentations: [...(c.presentations || []), newPres] }
         : c
     ));
-    setNewGroup('');
+    setNewGroupNum('');
+    setNewGroupName('');
     setNewTopic('');
     setNewMembers('');
   };
 
-  const exportAttendanceCSV = () => {
-    if (!activeCourse) return;
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      ["Roll No,Student Name,Status"]
-      .concat((activeCourse.attendance || []).map(row => `${row.roll},${row.name},${row.status}`))
-      .join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${activeCourse.code}_attendance_report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const updatePresentationMarks = (presId, marksValue) => {
+    setAllCourses(allCourses.map(c => {
+      if (c.id === activeCourse.id) {
+        const updatedPres = c.presentations.map(p => p.id === presId ? { ...p, marks: marksValue } : p);
+        return { ...c, presentations: updatedPres };
+      }
+      return c;
+    }));
+  };
+
+  // 10. Student Record Operations (Delete & Update Marks)
+  const handleDeleteStudent = (studentId) => {
+    if (window.confirm("Are you sure you want to delete this student record?")) {
+      setStudentsList(studentsList.filter(s => s.id !== studentId));
+    }
+  };
+
+  const handleSaveStudentMarks = (studentId) => {
+    setStudentsList(studentsList.map(s => s.id === studentId ? { ...s, marks: editStudentMarks } : s));
+    setEditingStudentId(null);
   };
 
   const handleCreateCourse = (e) => {
@@ -329,7 +433,7 @@ export default function App() {
       id: Date.now(),
       title: newCourseTitle,
       code: newCourseCode || 'CS-501',
-      students: 1,
+      studentsCount: 1,
       instructorEmail: currentUser?.email,
       instructor: currentUser?.displayName || 'Teacher',
       attendance: [],
@@ -344,7 +448,7 @@ export default function App() {
     setShowCreateCourseModal(false);
   };
 
-  // AUTHENTICATION MODAL GATE (WITH RESTORED SIGN IN TOGGLE)
+  // AUTHENTICATION MODAL GATE
   if (!currentUser || showAuthModal) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-900 px-4 font-sans">
@@ -354,8 +458,8 @@ export default function App() {
               T
             </div>
             <div>
-              <h3 className="font-extrabold text-lg text-slate-900">Tezgam Secure Portal</h3>
-              <p className="text-xs text-blue-600 font-medium">University of Turbat • Class Isolation Gate</p>
+              <h3 className="font-extrabold text-lg text-slate-900">Welcome to Tezgam LMS</h3>
+              <p className="text-xs text-blue-600 font-medium">University of Turbat • Official Portal</p>
             </div>
           </div>
 
@@ -433,7 +537,7 @@ export default function App() {
               <input
                 type="email"
                 required
-                placeholder={selectedRole === 'teacher' ? "teacher@uot.edu.pk" : "student@gmail.com"}
+                placeholder={selectedRole === 'teacher' ? "amir.nawaz@uot.edu.pk" : "student@gmail.com"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
@@ -461,7 +565,6 @@ export default function App() {
             </button>
           </form>
 
-          {/* RESTORED SIGN IN / SIGN UP TOGGLE */}
           <div className="mt-6 text-center border-t border-slate-100 pt-4">
             <button
               type="button"
@@ -471,9 +574,7 @@ export default function App() {
               }}
               className="text-xs font-semibold text-blue-600 hover:underline"
             >
-              {authMode === 'signup' 
-                ? 'Already have an account? Sign In' 
-                : "Need to create an account? Register"}
+              {authMode === 'signup' ? 'Already have an account? Sign In' : "Need an account? Register"}
             </button>
           </div>
         </div>
@@ -481,8 +582,18 @@ export default function App() {
     );
   }
 
+  // Filtered Student List for Search Operations
+  const filteredStudents = studentsList.filter(st => {
+    if (userRole === 'student') {
+      return st.email === currentUser?.email; // 10. Students see only their own info
+    }
+    return st.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) || 
+           st.roll.toLowerCase().includes(studentSearchQuery.toLowerCase());
+  });
+
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans">
+      {/* SIDEBAR NAVIGATION */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 shadow-xl">
         <div>
           <div className="flex items-center space-x-3 px-2 py-4 border-b border-slate-800 mb-6">
@@ -504,7 +615,18 @@ export default function App() {
             </div>
           </div>
 
+          {/* 9. Sequential Tabs */}
           <nav className="space-y-1.5">
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'home' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <HomeIcon className="w-5 h-5" />
+              <span>Home Dashboard</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('courses')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
@@ -512,7 +634,17 @@ export default function App() {
               }`}
             >
               <BookOpen className="w-5 h-5" />
-              <span>{userRole === 'teacher' ? 'My Courses & Modules' : 'Enrolled Courses'}</span>
+              <span>{userRole === 'teacher' ? 'My Courses & Lectures' : 'Enrolled Courses'}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('students')}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'students' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              <span>{userRole === 'teacher' ? 'Manage Student Marks' : 'My Academic Marks'}</span>
             </button>
 
             {userRole === 'teacher' && (
@@ -534,7 +666,7 @@ export default function App() {
               }`}
             >
               <FileText className="w-5 h-5" />
-              <span>Course Assignments</span>
+              <span>Assignments & Deadlines</span>
             </button>
 
             <button
@@ -549,7 +681,11 @@ export default function App() {
           </nav>
         </div>
 
-        <div className="border-t border-slate-800 pt-4">
+        {/* 13. DEVELOPER FOOTER */}
+        <div className="border-t border-slate-800 pt-4 space-y-3">
+          <div className="px-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Developed by: Amir Nawaz</p>
+          </div>
           <div className="flex items-center justify-between px-2">
             <div className="overflow-hidden">
               <p className="text-xs font-bold text-slate-200 truncate">{userName}</p>
@@ -566,36 +702,549 @@ export default function App() {
         </div>
       </aside>
 
+      {/* MAIN CONTENT AREA */}
       <main className="flex-1 overflow-y-auto p-8">
         <header className="flex justify-between items-center mb-8 pb-4 border-b border-slate-200">
           <div className="relative w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input 
               type="text" 
-              placeholder="Search course materials..." 
+              placeholder="Search LMS portal..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button 
-            onClick={handleLogout} 
-            className="flex items-center space-x-1.5 text-xs font-bold bg-red-50 text-red-600 px-3 py-1.5 rounded-xl border border-red-200 hover:bg-red-100 transition"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Log Out</span>
-          </button>
+
+          {/* 6. Teacher Notification Bell */}
+          <div className="flex items-center space-x-4 relative">
+            {userRole === 'teacher' && (
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition relative text-slate-600"
+                >
+                  <Bell className="w-4 h-4" />
+                  {notifications.some(n => !n.read) && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full absolute top-1 right-1"></span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50">
+                    <h4 className="font-bold text-xs text-slate-800 border-b pb-2 mb-2">Teacher Notifications</h4>
+                    <div className="space-y-2">
+                      {notifications.map(n => (
+                        <div key={n.id} className="p-2 bg-slate-50 rounded-xl text-xs">
+                          <p className="font-bold text-slate-800">{n.title}</p>
+                          <p className="text-[11px] text-slate-600">{n.text}</p>
+                          <span className="text-[9px] text-slate-400">{n.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button 
+              onClick={handleLogout} 
+              className="flex items-center space-x-1.5 text-xs font-bold bg-red-50 text-red-600 px-3 py-1.5 rounded-xl border border-red-200 hover:bg-red-100 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out</span>
+            </button>
+          </div>
         </header>
 
+        {/* 12 & 14. HERO GREETING BANNER WITH DYNAMIC TEACHER NAME */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-8">
           <div className="relative z-10">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-              Wash Atkay • University of Turbat
+              Welcome to Tezgam LMS • University of Turbat
             </span>
             <h2 className="text-2xl font-extrabold mt-1">
-              Welcome to {userRole === 'teacher' ? 'Teaching Management' : 'Study Portal'}, {userName}!
+              {userRole === 'teacher' ? `Welcome back, Prof. ${userName}!` : `Welcome to Study Portal, ${userName}!`}
             </h2>
+            <p className="text-xs text-blue-100 mt-1">
+              "I am not a teacher, but an awakener." — Manage courses, grade presentations, and track assignments seamlessly.
+            </p>
           </div>
           <Sparkles className="w-36 h-36 text-white/5 absolute -right-6 -bottom-6 pointer-events-none" />
         </div>
+
+        {/* 9. HOME DASHBOARD TAB */}
+        {activeTab === 'home' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <span className="text-xs font-bold text-slate-400 uppercase">Active Enrolled Courses</span>
+                <p className="text-3xl font-extrabold text-blue-600 mt-2">{visibleCourses.length}</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <span className="text-xs font-bold text-slate-400 uppercase">Total Class Students</span>
+                <p className="text-3xl font-extrabold text-emerald-600 mt-2">
+                  {visibleCourses.reduce((acc, c) => acc + (c.studentsCount || 0), 0)}
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <span className="text-xs font-bold text-slate-400 uppercase">Pending Assignments</span>
+                <p className="text-3xl font-extrabold text-indigo-600 mt-2">{assignments.length}</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="font-bold text-base text-slate-800 mb-4">Quick Overview & Recent Courses</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {visibleCourses.map(c => (
+                  <div key={c.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{c.code}</span>
+                      <p className="font-bold text-xs text-slate-800 mt-1">{c.title}</p>
+                      {/* 3. Total Students Enrolled */}
+                      <p className="text-[11px] text-slate-500">{c.studentsCount} Students Enrolled</p>
+                    </div>
+                    <button 
+                      onClick={() => { setSelectedCourseId(c.id); setActiveTab('courses'); }}
+                      className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-xl font-bold"
+                    >
+                      Open Class
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 10. SEARCH, DELETE, AND UPDATE STUDENT MARKS */}
+        {activeTab === 'students' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {userRole === 'teacher' ? 'Student Performance & Marks Management' : 'My Personal Grades'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {userRole === 'teacher' ? 'Search, update, or remove student records.' : 'View your isolated academic performance.'}
+                </p>
+              </div>
+              {userRole === 'teacher' && (
+                <div className="relative w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input 
+                    type="text" 
+                    placeholder="Search by student name or roll..." 
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-bold">
+                  <tr>
+                    <th className="p-4">Student Name</th>
+                    <th className="p-4">Roll Number</th>
+                    <th className="p-4">Course Code</th>
+                    <th className="p-4">Evaluated Marks</th>
+                    {userRole === 'teacher' && <th className="p-4">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredStudents.map((st) => (
+                    <tr key={st.id}>
+                      <td className="p-4 font-bold text-slate-800">{st.name}</td>
+                      <td className="p-4 font-semibold text-blue-600">{st.roll}</td>
+                      <td className="p-4 text-slate-600">{st.courseCode}</td>
+                      <td className="p-4 font-extrabold text-emerald-600">
+                        {editingStudentId === st.id ? (
+                          <input 
+                            type="text" 
+                            value={editStudentMarks}
+                            onChange={(e) => setEditStudentMarks(e.target.value)}
+                            className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-20"
+                          />
+                        ) : (
+                          st.marks
+                        )}
+                      </td>
+                      {userRole === 'teacher' && (
+                        <td className="p-4 flex items-center space-x-2">
+                          {editingStudentId === st.id ? (
+                            <button 
+                              onClick={() => handleSaveStudentMarks(st.id)}
+                              className="p-1.5 bg-emerald-600 text-white rounded-lg"
+                              title="Save Marks"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => { setEditingStudentId(st.id); setEditStudentMarks(st.marks); }}
+                              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                              title="Edit Marks"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleDeleteStudent(st.id)}
+                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                            title="Delete Student"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 5. ASSIGNMENTS WITH DEADLINE COUNTDOWN REMINDERS */}
+        {activeTab === 'assignments' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-800">Assignments & Live Reminders</h3>
+
+            {userRole === 'teacher' && (
+              <form onSubmit={handleCreateAssignment} className="bg-white p-6 border border-slate-200 rounded-2xl space-y-4">
+                <h4 className="font-bold text-xs text-slate-700">Assign New Assignment</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Assignment Title..." 
+                    value={newAssignmentTitle}
+                    onChange={(e) => setNewAssignmentTitle(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                  />
+                  <input 
+                    type="datetime-local" 
+                    required
+                    value={newAssignmentDeadline}
+                    onChange={(e) => setNewAssignmentDeadline(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                  />
+                </div>
+                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold">
+                  Publish Assignment
+                </button>
+              </form>
+            )}
+
+            <div className="space-y-4">
+              {assignments.map(a => {
+                const rem = calculateTimeRemaining(a.deadline);
+                return (
+                  <div key={a.id} className="bg-white border border-slate-200 rounded-2xl p-6 flex justify-between items-center shadow-sm">
+                    <div>
+                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg">{a.courseCode}</span>
+                      <h4 className="font-bold text-sm text-slate-800 mt-2">{a.title}</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Deadline: {new Date(a.deadline).toLocaleString()}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center space-x-1 ${
+                        rem.expired ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{rem.text}</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <AssignmentUpload courseCode={activeCourse?.code} />
+          </div>
+        )}
+
+        {/* COURSES & ISOLATED MODULES */}
+        {activeTab === 'courses' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-800">
+                {userRole === 'teacher' ? 'My Teaching Courses' : 'My Enrolled Courses'}
+              </h3>
+              {userRole === 'teacher' && (
+                <button 
+                  onClick={() => setShowCreateCourseModal(true)}
+                  className="bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center space-x-2"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>1. Create New Course</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {visibleCourses.map((course) => (
+                <div 
+                  key={course.id} 
+                  className={`p-6 rounded-2xl border transition ${
+                    activeCourse?.id === course.id ? 'bg-blue-50/40 border-blue-500 ring-2 ring-blue-500/20' : 'bg-white border-slate-200'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                      {course.code.split('-')[0]}
+                    </div>
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">{course.code}</span>
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-base">{course.title}</h4>
+                  <p className="text-xs text-slate-500 mt-1">Instructor: {course.instructor}</p>
+                  
+                  {/* 3. Total Enrolled Students */}
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-medium flex items-center space-x-1">
+                      <Users className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{course.studentsCount} Total Students Enrolled</span>
+                    </span>
+                    <button 
+                      type="button"
+                      onClick={() => setSelectedCourseId(course.id)}
+                      className="bg-blue-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1"
+                    >
+                      <span>Open Course Modules</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {activeCourse && (
+              <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-10">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-5">
+                  <div>
+                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{activeCourse.code}</span>
+                    <h3 className="text-2xl font-extrabold text-slate-900">{activeCourse.title}</h3>
+                  </div>
+                  <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200">
+                    Active Class Session
+                  </span>
+                </div>
+
+                {/* 2. ATTENDANCE REGISTER (Present, Absent, Leave, Late + CSV Export/Import) */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                        <UserCheck className="w-5 h-5 text-blue-600" />
+                        <span>2. Class Attendance Register</span>
+                      </h4>
+                      <p className="text-xs text-slate-500">Click any status to cycle between Present, Absent, Leave, or Late.</p>
+                    </div>
+
+                    {userRole === 'teacher' && (
+                      <div className="flex items-center space-x-2">
+                        <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer flex items-center space-x-1 border">
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <span>Import CSV</span>
+                          <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+                        </label>
+                        <button 
+                          onClick={exportAttendanceCSV}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Export CSV Report</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                        <tr>
+                          <th className="p-3.5">Roll Number</th>
+                          <th className="p-3.5">Student Name</th>
+                          <th className="p-3.5">Attendance Status (Click to Toggle)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(activeCourse.attendance || []).map((student) => (
+                          <tr key={student.id}>
+                            <td className="p-3.5 font-semibold text-slate-600">{student.roll}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{student.name}</td>
+                            <td className="p-3.5">
+                              <button
+                                onClick={() => toggleAttendanceStatus(student.id)}
+                                className={`px-3 py-1 rounded-xl font-bold text-xs border ${
+                                  student.status === 'Present' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  student.status === 'Absent' ? 'bg-red-50 text-red-700 border-red-200' :
+                                  student.status === 'Leave' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  'bg-purple-50 text-purple-700 border-purple-200'
+                                }`}
+                              >
+                                {student.status}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 4 & 8. LECTURES & NOTES UPLOAD (PDF, Slides, Word Docs) */}
+                <div className="space-y-4 pt-6 border-t border-slate-200">
+                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <span>4. Course Notes & Lecture Downloads ({activeCourse.code})</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(activeCourse.lectures || []).map((lec) => (
+                      <div key={lec.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="text-[9px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                              {lec.fileType}
+                            </span>
+                            <p className="font-bold text-xs text-slate-800">{lec.title}</p>
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1">{lec.fileName} • {lec.size}</p>
+                        </div>
+                        <button 
+                          onClick={() => alert(`Downloading "${lec.fileName}" to your device...`)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1 shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {userRole === 'teacher' && (
+                    <form onSubmit={handleAddLecture} className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2">
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Lecture note title..." 
+                        value={newLectureTitle}
+                        onChange={(e) => setNewLectureTitle(e.target.value)}
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
+                      />
+                      <select
+                        value={newLectureFileType}
+                        onChange={(e) => setNewLectureFileType(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold"
+                      >
+                        <option value="pdf">PDF Document (.pdf)</option>
+                        <option value="slides">Presentation Slides (.pptx)</option>
+                        <option value="docx">Word Document (.docx)</option>
+                      </select>
+                      <button 
+                        type="submit"
+                        className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center space-x-1"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload File</span>
+                      </button>
+                    </form>
+                  )}
+                </div>
+
+                {/* 7. PRESENTATION GROUPS & MARKS EVALUATION */}
+                <div className="space-y-4 pt-6 border-t border-slate-200">
+                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                    <Award className="w-5 h-5 text-blue-600" />
+                    <span>7. Presentation Groups & Live Evaluation</span>
+                  </h4>
+
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                        <tr>
+                          <th className="p-3.5">Group No</th>
+                          <th className="p-3.5">Group Name</th>
+                          <th className="p-3.5">Presentation Topic</th>
+                          <th className="p-3.5">Assigned Members</th>
+                          <th className="p-3.5">Marks / Score</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(activeCourse.presentations || []).map((p) => (
+                          <tr key={p.id}>
+                            <td className="p-3.5 font-bold text-blue-600">{p.groupNumber}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{p.groupName}</td>
+                            <td className="p-3.5 text-slate-600">{p.topic}</td>
+                            <td className="p-3.5 text-slate-600">{p.members}</td>
+                            <td className="p-3.5 font-extrabold text-emerald-600">
+                              {userRole === 'teacher' ? (
+                                <input 
+                                  type="text" 
+                                  value={p.marks}
+                                  onChange={(e) => updatePresentationMarks(p.id, e.target.value)}
+                                  className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-24"
+                                />
+                              ) : (
+                                p.marks
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {userRole === 'teacher' && (
+                    <form onSubmit={handleAddPresentationGroup} className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
+                      <input 
+                        type="text" 
+                        placeholder="Group No (e.g. Group 01)" 
+                        value={newGroupNum}
+                        onChange={(e) => setNewGroupNum(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                      />
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Group Name" 
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                      />
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Topic Name" 
+                        value={newTopic}
+                        onChange={(e) => setNewTopic(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Student Names" 
+                        value={newMembers}
+                        onChange={(e) => setNewMembers(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                      />
+                      <button 
+                        type="submit"
+                        className="md:col-span-4 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                      >
+                        Create Presentation Group
+                      </button>
+                    </form>
+                  )}
+                </div>
+
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === 'verification' && userRole === 'teacher' && (
           <div className="space-y-6">
@@ -612,7 +1261,7 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {studentRegistry.map((st) => (
+                  {studentsList.map((st) => (
                     <tr key={st.id}>
                       <td className="p-4 font-bold text-slate-800">{st.name}</td>
                       <td className="p-4 font-semibold text-blue-600">{st.roll}</td>
@@ -628,11 +1277,11 @@ export default function App() {
                         {!st.verified && (
                           <button 
                             onClick={() => {
-                              setStudentRegistry(studentRegistry.map(s => s.id === st.id ? { ...s, verified: true } : s));
+                              setStudentsList(studentsList.map(s => s.id === st.id ? { ...s, verified: true } : s));
                             }}
                             className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-[11px]"
                           >
-                            Approve
+                            Approve Student
                           </button>
                         )}
                       </td>
@@ -644,300 +1293,10 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'courses' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-800">
-                {userRole === 'teacher' ? 'My Teaching Courses' : 'My Enrolled Courses'}
-              </h3>
-              {userRole === 'teacher' && (
-                <button 
-                  onClick={() => setShowCreateCourseModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Create New Course</span>
-                </button>
-              )}
-            </div>
-
-            {visibleCourses.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">
-                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                <p className="font-bold text-sm">No courses created yet.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {visibleCourses.map((course) => (
-                  <div 
-                    key={course.id} 
-                    className={`p-6 rounded-2xl border transition ${
-                      activeCourse?.id === course.id 
-                        ? 'bg-blue-50/40 border-blue-500 ring-2 ring-blue-500/20' 
-                        : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                        {course.code.split('-')[0]}
-                      </div>
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">{course.code}</span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-base">{course.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">Instructor: {course.instructor}</p>
-                    
-                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-medium flex items-center space-x-1">
-                        <Users className="w-3.5 h-3.5 text-blue-600" />
-                        <span>{course.students} Enrolled Students</span>
-                      </span>
-                      <button 
-                        type="button"
-                        onClick={() => setSelectedCourseId(course.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center space-x-1 shadow-xs"
-                      >
-                        <span>View Course Modules</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeCourse && (
-              <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-10">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-5">
-                  <div>
-                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{activeCourse.code}</span>
-                    <h3 className="text-2xl font-extrabold text-slate-900">{activeCourse.title}</h3>
-                  </div>
-                  <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200">
-                    Active Class View
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
-                      <UserCheck className="w-5 h-5 text-blue-600" />
-                      <span>Class Attendance Register</span>
-                    </h4>
-                    {userRole === 'teacher' && (
-                      <button 
-                        onClick={exportAttendanceCSV}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-sm"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Export Attendance CSV</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                        <tr>
-                          <th className="p-3.5">Roll Number</th>
-                          <th className="p-3.5">Student Name</th>
-                          <th className="p-3.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {(activeCourse.attendance || []).map((student) => (
-                          <tr key={student.id}>
-                            <td className="p-3.5 font-semibold text-slate-600">{student.roll}</td>
-                            <td className="p-3.5 font-bold text-slate-800">{student.name}</td>
-                            <td className="p-3.5">
-                              <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${
-                                student.status === 'Present' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                              }`}>
-                                {student.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-slate-200">
-                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <span>Lecture Notes & PDF Files for {activeCourse.code}</span>
-                  </h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(activeCourse.lectures || []).map((lec) => (
-                      <div key={lec.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex justify-between items-center">
-                        <div>
-                          <p className="font-bold text-xs text-slate-800">{lec.title}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{lec.date} • {lec.size}</p>
-                        </div>
-                        <button 
-                          onClick={() => alert(`Downloading file: ${lec.title}`)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1 shadow-sm"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {userRole === 'teacher' && (
-                    <form onSubmit={handleAddLecture} className="flex space-x-2 mt-2">
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Enter lecture title or PDF name..." 
-                        value={newLectureTitle}
-                        onChange={(e) => setNewLectureTitle(e.target.value)}
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
-                      />
-                      <button 
-                        type="submit"
-                        className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Upload Lecture Note</span>
-                      </button>
-                    </form>
-                  )}
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-slate-200">
-                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
-                    <Megaphone className="w-5 h-5 text-blue-600" />
-                    <span>Notice Board ({activeCourse.code} Students Only)</span>
-                  </h4>
-
-                  <div className="space-y-3">
-                    {(activeCourse.notices || []).map((n) => (
-                      <div key={n.id} className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="font-bold text-xs text-blue-950">{n.title}</p>
-                          <span className="text-[10px] font-semibold text-blue-600">{n.date}</span>
-                        </div>
-                        <p className="text-xs text-slate-600">{n.content}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {userRole === 'teacher' && (
-                    <form onSubmit={handleAddNotice} className="space-y-2 mt-2">
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Announcement Title for this class..." 
-                        value={newNoticeTitle}
-                        onChange={(e) => setNewNoticeTitle(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
-                      />
-                      <textarea 
-                        required
-                        placeholder="Notice Message..." 
-                        value={newNoticeContent}
-                        onChange={(e) => setNewNoticeContent(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
-                      />
-                      <button 
-                        type="submit"
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition"
-                      >
-                        Publish Class Announcement
-                      </button>
-                    </form>
-                  )}
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-slate-200">
-                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
-                    <Award className="w-5 h-5 text-blue-600" />
-                    <span>Presentation Groups & Marks ({activeCourse.code})</span>
-                  </h4>
-
-                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                        <tr>
-                          <th className="p-3.5">Group</th>
-                          <th className="p-3.5">Topic</th>
-                          <th className="p-3.5">Members</th>
-                          <th className="p-3.5">Score</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {(activeCourse.presentations || []).map((p) => (
-                          <tr key={p.id}>
-                            <td className="p-3.5 font-bold text-slate-800">{p.groupName}</td>
-                            <td className="p-3.5 text-slate-600">{p.topic}</td>
-                            <td className="p-3.5 text-slate-600">{p.members}</td>
-                            <td className="p-3.5 font-extrabold text-blue-600">{p.marks}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {userRole === 'teacher' && (
-                    <form onSubmit={handleAddPresentation} className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Group Name" 
-                        value={newGroup}
-                        onChange={(e) => setNewGroup(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
-                      />
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Presentation Topic" 
-                        value={newTopic}
-                        onChange={(e) => setNewTopic(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
-                      />
-                      <input 
-                        type="text" 
-                        placeholder="Student Names" 
-                        value={newMembers}
-                        onChange={(e) => setNewMembers(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
-                      />
-                      <button 
-                        type="submit"
-                        className="md:col-span-3 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition"
-                      >
-                        Create Presentation Group
-                      </button>
-                    </form>
-                  )}
-                </div>
-
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'assignments' && (
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-sm text-blue-900">
-                  Viewing Assignments for: {activeCourse ? `${activeCourse.code} - ${activeCourse.title}` : 'All Enrolled Courses'}
-                </h4>
-                <p className="text-xs text-blue-700">Assignments uploaded here are isolated specifically to students of this course.</p>
-              </div>
-            </div>
-            <AssignmentUpload courseCode={activeCourse?.code} />
-          </div>
-        )}
-
         {activeTab === 'quizzes' && <QuizModule courseCode={activeCourse?.code} />}
       </main>
 
+      {/* CREATE COURSE MODAL */}
       {showCreateCourseModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border">
