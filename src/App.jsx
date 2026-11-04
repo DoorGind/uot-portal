@@ -19,8 +19,6 @@ import {
   CheckCircle2,
   Upload,
   Award,
-  Layers,
-  Calendar,
   AlertCircle
 } from 'lucide-react';
 import QuizModule from './components/QuizModule';
@@ -42,7 +40,7 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(true);
   
   // Auth Form State
-  const [authMode, setAuthMode] = useState('signup'); 
+  const [authMode, setAuthMode] = useState('signup'); // 'signup' or 'signin'
   const [selectedRole, setSelectedRole] = useState('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,7 +49,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Student Registry (Pending & Approved Students)
+  // Student Registry
   const [studentRegistry, setStudentRegistry] = useState([
     { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', verified: true },
     { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', verified: true },
@@ -100,7 +98,6 @@ export default function App() {
     }
   ]);
 
-  // Selected Course State
   const [selectedCourseId, setSelectedCourseId] = useState(1);
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [newCourseTitle, setNewCourseTitle] = useState('');
@@ -114,7 +111,6 @@ export default function App() {
   const [newTopic, setNewTopic] = useState('');
   const [newMembers, setNewMembers] = useState('');
 
-  // Master Admin & Authorization Logic
   const MASTER_ADMIN_EMAIL = "amir.nawaz@uot.edu.pk";
 
   const checkUserAuthorization = (userEmail, role, roll) => {
@@ -180,11 +176,13 @@ export default function App() {
     setAuthError('');
     setAuthLoading(true);
 
-    const authCheck = checkUserAuthorization(email, selectedRole, rollNumber);
-    if (!authCheck.authorized) {
-      setAuthError(authCheck.error);
-      setAuthLoading(false);
-      return;
+    if (authMode === 'signup') {
+      const authCheck = checkUserAuthorization(email, selectedRole, rollNumber);
+      if (!authCheck.authorized) {
+        setAuthError(authCheck.error);
+        setAuthLoading(false);
+        return;
+      }
     }
 
     try {
@@ -211,7 +209,15 @@ export default function App() {
           isAuthorized: true
         });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const isTeacher = userCredential.user.email === MASTER_ADMIN_EMAIL || userCredential.user.email.endsWith('@uot.edu.pk');
+        setCurrentUser({
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: userCredential.user.displayName || userCredential.user.email.split('@')[0],
+          role: isTeacher ? 'teacher' : 'student',
+          isAuthorized: true
+        });
       }
       setShowAuthModal(false);
     } catch (error) {
@@ -231,21 +237,18 @@ export default function App() {
     }
   };
 
-  // FILTERED DATA ACCESS (ISOLATES TEACHER & STUDENT PERMISSIONS)
   const userName = currentUser?.displayName || "User";
   const userRole = currentUser?.role || 'student';
 
-  // FIX ISSUE #2: Teachers see ONLY their own courses. Students see enrolled courses.
   const visibleCourses = allCourses.filter(course => {
     if (userRole === 'teacher') {
       return course.instructorEmail === currentUser?.email || currentUser?.email === MASTER_ADMIN_EMAIL;
     }
-    return true; // Students view enrolled courses
+    return true;
   });
 
   const activeCourse = visibleCourses.find(c => c.id === selectedCourseId) || visibleCourses[0];
 
-  // FIX ISSUE #3: Working Upload Lecture Note Handler
   const handleAddLecture = (e) => {
     e.preventDefault();
     if (!newLectureTitle || !activeCourse) return;
@@ -264,7 +267,6 @@ export default function App() {
     setNewLectureTitle('');
   };
 
-  // FIX ISSUE #4: Course-specific Notice Board Announcement Handler
   const handleAddNotice = (e) => {
     e.preventDefault();
     if (!newNoticeTitle || !newNoticeContent || !activeCourse) return;
@@ -284,7 +286,6 @@ export default function App() {
     setNewNoticeContent('');
   };
 
-  // Presentation Group Handler
   const handleAddPresentation = (e) => {
     e.preventDefault();
     if (!newGroup || !newTopic || !activeCourse) return;
@@ -306,7 +307,6 @@ export default function App() {
     setNewMembers('');
   };
 
-  // CSV Attendance Export
   const exportAttendanceCSV = () => {
     if (!activeCourse) return;
     const csvContent = "data:text/csv;charset=utf-8," + 
@@ -344,7 +344,7 @@ export default function App() {
     setShowCreateCourseModal(false);
   };
 
-  // AUTHENTICATION MODAL GATE
+  // AUTHENTICATION MODAL GATE (WITH RESTORED SIGN IN TOGGLE)
   if (!currentUser || showAuthModal) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-900 px-4 font-sans">
@@ -428,12 +428,12 @@ export default function App() {
 
             <div>
               <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
-                {selectedRole === 'teacher' ? 'Official Email (@uot.edu.pk)' : 'Personal Gmail Address'}
+                {selectedRole === 'teacher' ? 'Official Email (@uot.edu.pk)' : 'Email Address'}
               </label>
               <input
                 type="email"
                 required
-                placeholder={selectedRole === 'teacher' ? "amir.nawaz@uot.edu.pk" : "student@gmail.com"}
+                placeholder={selectedRole === 'teacher' ? "teacher@uot.edu.pk" : "student@gmail.com"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
@@ -457,9 +457,25 @@ export default function App() {
               disabled={authLoading}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition text-xs shadow-md shadow-blue-600/30"
             >
-              {authLoading ? 'Signing In...' : (authMode === 'signup' ? `Register ${selectedRole === 'teacher' ? 'Teacher' : 'Student'} Account` : 'Sign In')}
+              {authLoading ? 'Processing...' : (authMode === 'signup' ? `Register ${selectedRole === 'teacher' ? 'Teacher' : 'Student'} Account` : 'Sign In')}
             </button>
           </form>
+
+          {/* RESTORED SIGN IN / SIGN UP TOGGLE */}
+          <div className="mt-6 text-center border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode(authMode === 'signup' ? 'signin' : 'signup');
+                setAuthError('');
+              }}
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              {authMode === 'signup' 
+                ? 'Already have an account? Sign In' 
+                : "Need to create an account? Register"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -467,7 +483,6 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans">
-      {/* SIDEBAR NAVIGATION - FIX ISSUE #7 (Uncluttered, intuitive tabs) */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 shadow-xl">
         <div>
           <div className="flex items-center space-x-3 px-2 py-4 border-b border-slate-800 mb-6">
@@ -512,7 +527,6 @@ export default function App() {
               </button>
             )}
 
-            {/* FIX ISSUE #5: Course-Isolated Assignments */}
             <button
               onClick={() => setActiveTab('assignments')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
@@ -552,7 +566,6 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
       <main className="flex-1 overflow-y-auto p-8">
         <header className="flex justify-between items-center mb-8 pb-4 border-b border-slate-200">
           <div className="relative w-72">
@@ -572,7 +585,6 @@ export default function App() {
           </button>
         </header>
 
-        {/* HERO BANNER */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-8">
           <div className="relative z-10">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
@@ -581,16 +593,10 @@ export default function App() {
             <h2 className="text-2xl font-extrabold mt-1">
               Welcome to {userRole === 'teacher' ? 'Teaching Management' : 'Study Portal'}, {userName}!
             </h2>
-            <p className="text-xs text-blue-100 mt-1">
-              {userRole === 'teacher' 
-                ? 'Manage your private classes, publish lecture notes, and review student submissions.' 
-                : 'Access notes, announcements, and assignments for your registered courses.'}
-            </p>
           </div>
           <Sparkles className="w-36 h-36 text-white/5 absolute -right-6 -bottom-6 pointer-events-none" />
         </div>
 
-        {/* VERIFICATION HUB FOR TEACHERS */}
         {activeTab === 'verification' && userRole === 'teacher' && (
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-800">Student Roll Number Approval</h3>
@@ -638,7 +644,6 @@ export default function App() {
           </div>
         )}
 
-        {/* COURSES TAB & COURSE-SPECIFIC ISOLATED MODULES */}
         {activeTab === 'courses' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -656,12 +661,10 @@ export default function App() {
               )}
             </div>
 
-            {/* FIX ISSUE #2: Course Cards List (Only Teacher's Own Courses Displayed) */}
             {visibleCourses.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">
                 <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
                 <p className="font-bold text-sm">No courses created yet.</p>
-                <p className="text-xs">Click "Create New Course" above to start managing your class.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -683,7 +686,6 @@ export default function App() {
                     <h4 className="font-bold text-slate-800 text-base">{course.title}</h4>
                     <p className="text-xs text-slate-500 mt-1">Instructor: {course.instructor}</p>
                     
-                    {/* FIX ISSUE #1: Fully Functional View Course Modules Button */}
                     <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
                       <span className="text-slate-500 font-medium flex items-center space-x-1">
                         <Users className="w-3.5 h-3.5 text-blue-600" />
@@ -703,7 +705,6 @@ export default function App() {
               </div>
             )}
 
-            {/* ACTIVE COURSE ISOLATED MODULE DASHBOARD */}
             {activeCourse && (
               <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-10">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-5">
@@ -716,7 +717,6 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* 1. CLASS ATTENDANCE */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
@@ -762,7 +762,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 2. FIX ISSUE #3: Working Upload Lecture Notes */}
                 <div className="space-y-4 pt-6 border-t border-slate-200">
                   <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
                     <FileText className="w-5 h-5 text-blue-600" />
@@ -808,7 +807,6 @@ export default function App() {
                   )}
                 </div>
 
-                {/* 3. FIX ISSUE #4: Course-Isolated Notice Board */}
                 <div className="space-y-4 pt-6 border-t border-slate-200">
                   <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
                     <Megaphone className="w-5 h-5 text-blue-600" />
@@ -839,7 +837,7 @@ export default function App() {
                       />
                       <textarea 
                         required
-                        placeholder="Notice Message (Will NOT be visible to other classes)..." 
+                        placeholder="Notice Message..." 
                         value={newNoticeContent}
                         onChange={(e) => setNewNoticeContent(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
@@ -854,7 +852,6 @@ export default function App() {
                   )}
                 </div>
 
-                {/* 4. PRESENTATION GROUPS & MARKS */}
                 <div className="space-y-4 pt-6 border-t border-slate-200">
                   <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
                     <Award className="w-5 h-5 text-blue-600" />
@@ -924,7 +921,6 @@ export default function App() {
           </div>
         )}
 
-        {/* FIX ISSUE #5: COURSE-ISOLATED ASSIGNMENTS TAB */}
         {activeTab === 'assignments' && (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-between">
@@ -942,7 +938,6 @@ export default function App() {
         {activeTab === 'quizzes' && <QuizModule courseCode={activeCourse?.code} />}
       </main>
 
-      {/* CREATE COURSE MODAL */}
       {showCreateCourseModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border">
