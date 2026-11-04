@@ -16,7 +16,9 @@ import {
   Briefcase,
   Megaphone,
   UserCheck,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import QuizModule from './components/QuizModule';
 import AssignmentUpload from './components/AssignmentUpload';
@@ -42,8 +44,16 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [rollNumber, setRollNumber] = useState(''); // Required for students
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+
+  // Registered Students Approval Queue (Simulated DB)
+  const [studentRegistry, setStudentRegistry] = useState([
+    { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', verified: true },
+    { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', verified: true },
+    { id: 3, name: 'Tariq Khan', roll: 'UOT-2024-CS-15', email: 'tariq@gmail.com', verified: false }
+  ]);
 
   // LMS Feature States
   const [courses, setCourses] = useState([
@@ -68,56 +78,62 @@ export default function App() {
     { id: 1, title: 'Week 1: React & Vite Architecture Setup', date: 'Nov 2026', size: '2.4 MB' },
     { id: 2, title: 'Week 2: Firebase Firestore & Auth Configuration', date: 'Nov 2026', size: '4.1 MB' }
   ]);
-  const [newLectureTitle, setNewLectureTitle] = useState('');
 
   // Noticeboard State
   const [notices, setNotices] = useState([
     { id: 1, title: 'Midterm Examination Schedule Announcement', content: 'Midterms will commence from next Monday. Please review the syllabus.', date: 'Today' }
   ]);
-  const [newNoticeTitle, setNewNoticeTitle] = useState('');
-  const [newNoticeContent, setNewNoticeContent] = useState('');
 
   // Presentation Groups State
   const [presentations, setPresentations] = useState([
     { id: 1, groupName: 'Alpha Team', topic: 'React State Management in LMS', members: 'Bilal Ahmed, Ayesha Baloch', marks: '85/100' }
   ]);
-  const [newGroup, setNewGroup] = useState('');
-  const [newTopic, setNewTopic] = useState('');
-  const [newMembers, setNewMembers] = useState('');
 
+  // Notifications State
   const [notifications, setNotifications] = useState([
-    { id: 1, text: 'Student Bilal Ahmed submitted Assignment #1', time: '10 mins ago' }
+    { id: 1, text: 'Student Tariq Khan registered & waiting for Roll Number approval', time: 'Just now' }
   ]);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // STRICT AUTHORIZATION WHITELIST & MASTER ADMIN
+  // MASTER ADMIN & TEACHER DOMAIN RESTRICTIONS
   const MASTER_ADMIN_EMAIL = "amir.nawaz@uot.edu.pk";
-  
-  // List of pre-authorized teacher/student emails or domains allowed into the portal
-  const AUTHORIZED_WHITELIST = [
-    "amir.nawaz@uot.edu.pk",
-    "mahnaz.baloch@uot.edu.pk",
-    "student@uot.edu.pk"
-  ];
 
-  const isEmailAuthorized = (userEmail) => {
-    if (!userEmail) return false;
-    if (userEmail === MASTER_ADMIN_EMAIL) return true;
-    // Must be part of university domain or explicit whitelist
-    return userEmail.endsWith('@uot.edu.pk') || AUTHORIZED_WHITELIST.includes(userEmail);
+  // Check authorization rules
+  const checkUserAuthorization = (userEmail, role, roll) => {
+    if (userEmail === MASTER_ADMIN_EMAIL) return { authorized: true, role: 'teacher' };
+    
+    // TEACHERS: Must have official @uot.edu.pk email
+    if (role === 'teacher') {
+      const isOfficial = userEmail.endsWith('@uot.edu.pk');
+      return { authorized: isOfficial, role: 'teacher', error: isOfficial ? null : "Teachers must use an official @uot.edu.pk email address." };
+    }
+
+    // STUDENTS: Personal Gmail allowed if they provide a valid UoT Roll Number
+    if (role === 'student') {
+      const hasRoll = roll && roll.trim().toUpperCase().startsWith('UOT-');
+      return { 
+        authorized: hasRoll, 
+        role: 'student', 
+        error: hasRoll ? null : "Invalid Roll Number! Students must provide a valid UoT Roll No (e.g. UOT-2024-CS-01)." 
+      };
+    }
+
+    return { authorized: false, role: 'student', error: 'Unauthorized login attempt.' };
   };
 
   // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        const authorized = isEmailAuthorized(user.email);
+        const isMaster = user.email === MASTER_ADMIN_EMAIL;
+        const isTeacher = isMaster || user.email.endsWith('@uot.edu.pk');
+        
         setCurrentUser({
           uid: user.uid,
           email: user.email,
           displayName: user.displayName || user.email.split('@')[0],
-          role: user.email === MASTER_ADMIN_EMAIL ? 'teacher' : (selectedRole || 'student'),
-          isAuthorized: authorized
+          role: isTeacher ? 'teacher' : 'student',
+          isAuthorized: true
         });
         setShowAuthModal(false);
       } else {
@@ -126,7 +142,7 @@ export default function App() {
       }
     });
     return () => unsubscribe();
-  }, [selectedRole]);
+  }, []);
 
   // Google Sign-In Handler
   const handleGoogleSignIn = async () => {
@@ -135,9 +151,12 @@ export default function App() {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      if (!isEmailAuthorized(result.user.email)) {
-        setAuthError("Access Denied: This email is not authorized for the University of Turbat Portal.");
-        await signOut(auth);
+      const isTeacher = result.user.email.endsWith('@uot.edu.pk') || result.user.email === MASTER_ADMIN_EMAIL;
+      
+      // If student logs in via Google, prompt for Roll Number if needed
+      if (!isTeacher && selectedRole === 'student' && (!rollNumber || !rollNumber.trim().toUpperCase().startsWith('UOT-'))) {
+        setAuthError("Google Auth successful! Please enter your University Roll No below (e.g., UOT-2024-CS-01) to complete registration.");
+        return;
       }
     } catch (error) {
       if (error.code !== 'auth/popup-closed-by-user') {
@@ -153,21 +172,36 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     setAuthLoading(true);
-    try {
-      if (!isEmailAuthorized(email)) {
-        setAuthError("Unauthorized Email! Only official UoT portal accounts (@uot.edu.pk or pre-approved emails) are permitted.");
-        setAuthLoading(false);
-        return;
-      }
 
+    const authCheck = checkUserAuthorization(email, selectedRole, rollNumber);
+    if (!authCheck.authorized) {
+      setAuthError(authCheck.error);
+      setAuthLoading(false);
+      return;
+    }
+
+    try {
       if (authMode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name });
+        
+        // Add to student registry if student
+        if (selectedRole === 'student') {
+          setStudentRegistry(prev => [...prev, {
+            id: prev.length + 1,
+            name: name,
+            roll: rollNumber.toUpperCase(),
+            email: email,
+            verified: true
+          }]);
+        }
+
         setCurrentUser({ 
           uid: userCredential.user.uid,
           email: userCredential.user.email,
           displayName: name, 
           role: selectedRole,
+          rollNumber: rollNumber.toUpperCase(),
           isAuthorized: true
         });
       } else {
@@ -205,27 +239,11 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  const handleCreateCourse = (e) => {
-    e.preventDefault();
-    if (!newCourseTitle) return;
-    const newCourse = {
-      id: courses.length + 1,
-      title: newCourseTitle,
-      code: newCourseCode || 'CS-501',
-      students: 1,
-      instructor: currentUser?.displayName || 'Teacher'
-    };
-    setCourses([...courses, newCourse]);
-    setNewCourseTitle('');
-    setNewCourseCode('');
-    setShowCreateCourseModal(false);
-  };
-
   const userName = currentUser?.displayName || "User";
   const userRole = currentUser?.role || 'student';
 
-  // STRICT AUTHENTICATION GATE & UNAUTHORIZED BLOCK
-  if (!currentUser || showAuthModal || (currentUser && !currentUser.isAuthorized)) {
+  // STRICT AUTHENTICATION & ROLL NUMBER GATE
+  if (!currentUser || showAuthModal) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-900 px-4 font-sans">
         <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100">
@@ -235,138 +253,139 @@ export default function App() {
             </div>
             <div>
               <h3 className="font-extrabold text-lg text-slate-900">Tezgam Secure Portal</h3>
-              <p className="text-xs text-blue-600 font-medium">University of Turbat • Authorized Access Only</p>
+              <p className="text-xs text-blue-600 font-medium">University of Turbat • Authorized Access</p>
             </div>
           </div>
 
-          {currentUser && !currentUser.isAuthorized ? (
-            <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-center space-y-3 mb-4">
-              <ShieldAlert className="w-10 h-10 text-red-600 mx-auto" />
-              <h4 className="font-bold text-sm text-red-900">Unauthorized Account</h4>
-              <p className="text-xs text-red-600">
-                Your email ({currentUser.email}) is not authorized to access the University of Turbat portal. Please sign in with an official faculty or student credential.
-              </p>
-              <button 
-                onClick={handleLogout}
-                className="w-full bg-red-600 text-white py-2 rounded-xl text-xs font-bold shadow-sm"
-              >
-                Sign Out & Try Another Account
-              </button>
+          <p className="text-xs text-slate-500 mb-6">
+            Teachers must use an official <span className="font-bold text-slate-700">@uot.edu.pk</span> email. Students register using personal Gmail & Roll No.
+          </p>
+
+          <div className="bg-slate-100 p-1 rounded-xl flex mb-6">
+            <button
+              type="button"
+              onClick={() => { setSelectedRole('teacher'); setAuthError(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 ${
+                selectedRole === 'teacher' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Teacher Portal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSelectedRole('student'); setAuthError(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 ${
+                selectedRole === 'student' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Student Portal</span>
+            </button>
+          </div>
+
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={authLoading}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md mb-6 disabled:opacity-50"
+          >
+            <Mail className="w-4 h-4 text-red-400" />
+            <span>Continue with Gmail Google Auth</span>
+          </button>
+
+          <div className="relative flex py-2 items-center mb-6">
+            <div className="flex-grow border-t border-slate-200"></div>
+            <span className="flex-shrink mx-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">or register with email</span>
+            <div className="flex-grow border-t border-slate-200"></div>
+          </div>
+
+          {authError && (
+            <div className="mb-4 bg-red-50 text-red-600 border border-red-200 p-3 rounded-xl text-xs font-medium">
+              {authError}
             </div>
-          ) : (
-            <>
-              <p className="text-xs text-slate-500 mb-6">
-                Restricted portal. Only verified University of Turbat faculty and enrolled students can register or sign in.
-              </p>
-
-              <div className="bg-slate-100 p-1 rounded-xl flex mb-6">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('teacher')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 ${
-                    selectedRole === 'teacher' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <Briefcase className="w-3.5 h-3.5" />
-                  <span>Teacher Portal</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('student')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 ${
-                    selectedRole === 'student' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span>Student Portal</span>
-                </button>
-              </div>
-
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={authLoading}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md mb-6 disabled:opacity-50"
-              >
-                <Mail className="w-4 h-4 text-red-400" />
-                <span>Continue with Authorized UoT Google Auth</span>
-              </button>
-
-              <div className="relative flex py-2 items-center mb-6">
-                <div className="flex-grow border-t border-slate-200"></div>
-                <span className="flex-shrink mx-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">or institutional email</span>
-                <div className="flex-grow border-t border-slate-200"></div>
-              </div>
-
-              {authError && (
-                <div className="mb-4 bg-red-50 text-red-600 border border-red-200 p-3 rounded-xl text-xs font-medium">
-                  {authError}
-                </div>
-              )}
-
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                {authMode === 'signup' && (
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={selectedRole === 'teacher' ? "e.g. Mr. Amir Nawaz" : "e.g. Student Name"}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Institutional Email (@uot.edu.pk)</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@uot.edu.pk"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-blue-600/30 text-xs mt-2 disabled:opacity-50"
-                >
-                  {authLoading ? 'Verifying Authorization...' : (authMode === 'signup' ? `Register Authorized ${selectedRole === 'teacher' ? 'Teacher' : 'Student'}` : 'Secure Sign In')}
-                </button>
-              </form>
-
-              <div className="mt-6 text-center border-t border-slate-100 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode(authMode === 'signup' ? 'signin' : 'signup');
-                    setAuthError('');
-                  }}
-                  className="text-xs font-semibold text-blue-600 hover:underline"
-                >
-                  {authMode === 'signup' 
-                    ? 'Already have an authorized account? Sign In' 
-                    : "Need to register an account? Sign Up"}
-                </button>
-              </div>
-            </>
           )}
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {authMode === 'signup' && (
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder={selectedRole === 'teacher' ? "e.g. Mr. Amir Nawaz" : "e.g. Student Name"}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+
+            {/* DYNAMIC ROLL NUMBER REQUIREMENT FOR STUDENTS */}
+            {selectedRole === 'student' && authMode === 'signup' && (
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">
+                  UoT Student Roll Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. UOT-2024-CS-01"
+                  value={rollNumber}
+                  onChange={(e) => setRollNumber(e.target.value)}
+                  className="w-full bg-blue-50/50 border border-blue-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                {selectedRole === 'teacher' ? 'Official Email (@uot.edu.pk)' : 'Personal Gmail / Email Address'}
+              </label>
+              <input
+                type="email"
+                required
+                placeholder={selectedRole === 'teacher' ? "name@uot.edu.pk" : "student@gmail.com"}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-blue-600/30 text-xs mt-2 disabled:opacity-50"
+            >
+              {authLoading ? 'Verifying...' : (authMode === 'signup' ? `Register ${selectedRole === 'teacher' ? 'Teacher' : 'Student'} Account` : 'Sign In')}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode(authMode === 'signup' ? 'signin' : 'signup');
+                setAuthError('');
+              }}
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              {authMode === 'signup' 
+                ? 'Already registered? Sign In' 
+                : "Need to register? Sign Up"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -392,7 +411,7 @@ export default function App() {
               userRole === 'teacher' ? 'bg-indigo-950/50 border-indigo-800 text-indigo-300' : 'bg-blue-950/50 border-blue-800 text-blue-300'
             }`}>
               {userRole === 'teacher' ? <Briefcase className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
-              <span>{userRole === 'teacher' ? 'Authorized Teacher Portal' : 'Authorized Student Portal'}</span>
+              <span>{userRole === 'teacher' ? 'Teacher Portal Active' : 'Student Study Portal'}</span>
             </div>
           </div>
 
@@ -407,6 +426,18 @@ export default function App() {
               <span>{userRole === 'teacher' ? 'Manage Courses & Teach' : 'My Enrolled Studies'}</span>
             </button>
 
+            {userRole === 'teacher' && (
+              <button
+                onClick={() => setActiveTab('verification')}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
+                  activeTab === 'verification' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                }`}
+              >
+                <UserCheck className="w-5 h-5" />
+                <span>Student Verification Hub</span>
+              </button>
+            )}
+
             <button
               onClick={() => setActiveTab('assignments')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
@@ -414,7 +445,7 @@ export default function App() {
               }`}
             >
               <FileText className="w-5 h-5" />
-              <span>Assignments & Deadlines</span>
+              <span>Assignments</span>
             </button>
 
             <button
@@ -492,23 +523,67 @@ export default function App() {
           <Sparkles className="w-36 h-36 text-white/5 absolute -right-6 -bottom-6 pointer-events-none" />
         </div>
 
+        {/* VERIFICATION HUB FOR TEACHERS */}
+        {activeTab === 'verification' && userRole === 'teacher' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-800">Student Roll Number Verification Hub</h3>
+            <p className="text-xs text-slate-500">Verify and authorize student Gmail accounts registered with UoT Roll Numbers.</p>
+            
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                  <tr>
+                    <th className="p-4">Student Name</th>
+                    <th className="p-4">Roll Number</th>
+                    <th className="p-4">Gmail Address</th>
+                    <th className="p-4">Verification Status</th>
+                    <th className="p-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {studentRegistry.map((st) => (
+                    <tr key={st.id} className="hover:bg-slate-50/50">
+                      <td className="p-4 font-bold text-slate-800">{st.name}</td>
+                      <td className="p-4 font-semibold text-blue-600">{st.roll}</td>
+                      <td className="p-4 text-slate-600">{st.email}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+                          st.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          {st.verified ? 'Verified Student' : 'Pending Verification'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {!st.verified ? (
+                          <button 
+                            onClick={() => {
+                              setStudentRegistry(studentRegistry.map(s => s.id === st.id ? { ...s, verified: true } : s));
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] transition shadow-sm flex items-center space-x-1"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Approve Student</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-semibold">Approved</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* COURSES TAB */}
         {activeTab === 'courses' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold text-slate-800">
                 {userRole === 'teacher' ? 'Course Management & Teaching Modules' : 'My Enrolled Study Modules'}
               </h3>
-              {userRole === 'teacher' && (
-                <button 
-                  onClick={() => setShowCreateCourseModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Create New Course</span>
-                </button>
-              )}
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((course) => (
                 <div 
@@ -534,197 +609,12 @@ export default function App() {
                 </div>
               ))}
             </div>
-
-            {selectedCourse && (
-              <div className="mt-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-8">
-                <div className="flex justify-between items-center border-b pb-4">
-                  <div>
-                    <span className="text-xs font-bold text-blue-600">{selectedCourse.code}</span>
-                    <h3 className="text-xl font-extrabold text-slate-900">{selectedCourse.title} - Module Dashboard</h3>
-                  </div>
-                  <button 
-                    onClick={() => setSelectedCourse(null)}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 font-bold px-3 py-1.5 rounded-xl transition"
-                  >
-                    Close Module
-                  </button>
-                </div>
-
-                {/* ATTENDANCE */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-sm text-slate-800 flex items-center space-x-2">
-                      <UserCheck className="w-4 h-4 text-blue-600" />
-                      <span>Class Attendance Register</span>
-                    </h4>
-                    {userRole === 'teacher' && (
-                      <button 
-                        onClick={exportAttendanceCSV}
-                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center space-x-1"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Export CSV</span>
-                      </button>
-                    )}
-                  </div>
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                        <tr>
-                          <th className="p-3">Roll Number</th>
-                          <th className="p-3">Student Name</th>
-                          <th className="p-3">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {attendanceList.map((student) => (
-                          <tr key={student.id} className="hover:bg-slate-50/50">
-                            <td className="p-3 font-semibold text-slate-600">{student.roll}</td>
-                            <td className="p-3 font-bold text-slate-800">{student.name}</td>
-                            <td className="p-3">
-                              <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${
-                                student.status === 'Present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                student.status === 'Absent' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}>
-                                {student.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* NOTES */}
-                <div className="space-y-4 pt-4 border-t">
-                  <h4 className="font-bold text-sm text-slate-800 flex items-center space-x-2">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <span>Course Notes & Materials</span>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {lectures.map((lec) => (
-                      <div key={lec.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex justify-between items-center">
-                        <div>
-                          <p className="font-bold text-xs text-slate-800">{lec.title}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{lec.date} • {lec.size}</p>
-                        </div>
-                        <button 
-                          onClick={() => alert(`Downloading ${lec.title}...`)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-xl text-xs font-semibold flex items-center space-x-1"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* NOTICES */}
-                <div className="space-y-4 pt-4 border-t">
-                  <h4 className="font-bold text-sm text-slate-800 flex items-center space-x-2">
-                    <Megaphone className="w-4 h-4 text-blue-600" />
-                    <span>Announcements</span>
-                  </h4>
-                  <div className="space-y-3">
-                    {notices.map((n) => (
-                      <div key={n.id} className="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="font-bold text-xs text-blue-900">{n.title}</p>
-                          <span className="text-[10px] text-blue-600">{n.date}</span>
-                        </div>
-                        <p className="text-xs text-slate-600">{n.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* PRESENTATIONS */}
-                <div className="space-y-4 pt-4 border-t">
-                  <h4 className="font-bold text-sm text-slate-800 flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-blue-600" />
-                    <span>Presentation Groups & Evaluation</span>
-                  </h4>
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                        <tr>
-                          <th className="p-3">Group Name</th>
-                          <th className="p-3">Topic Title</th>
-                          <th className="p-3">Members</th>
-                          <th className="p-3">Marks</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {presentations.map((p) => (
-                          <tr key={p.id}>
-                            <td className="p-3 font-bold text-slate-800">{p.groupName}</td>
-                            <td className="p-3 text-slate-600">{p.topic}</td>
-                            <td className="p-3 text-slate-600">{p.members}</td>
-                            <td className="p-3 font-extrabold text-blue-600">{p.marks}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-              </div>
-            )}
           </div>
         )}
 
         {activeTab === 'assignments' && <AssignmentUpload />}
         {activeTab === 'quizzes' && <QuizModule />}
       </main>
-
-      {showCreateCourseModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border">
-            <h3 className="font-extrabold text-lg text-slate-900 mb-4">Create New Course</h3>
-            <form onSubmit={handleCreateCourse} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Course Title</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Data Structures"
-                  value={newCourseTitle}
-                  onChange={(e) => setNewCourseTitle(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Course Code</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. CS-301"
-                  value={newCourseCode}
-                  onChange={(e) => setNewCourseCode(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
-                />
-              </div>
-              <div className="flex space-x-2 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setShowCreateCourseModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold"
-                >
-                  Create Course
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
