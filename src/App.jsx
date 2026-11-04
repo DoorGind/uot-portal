@@ -127,20 +127,22 @@ export default function App() {
           </span>
         </header>
 
-        <div className="p-8 space-y-6">
-          {/* Welcome Banner */}
-          <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 opacity-10">
-              <Sparkles className="w-64 h-64" />
-            </div>
-            <div className="relative z-10 max-w-2xl">
-              <span className="text-xs font-semibold tracking-wider uppercase text-blue-300">Welcome Back</span>
-              <h2 className="text-2xl font-bold mt-1">Hello, Amir Nawaz!</h2>
-              <p className="text-sm text-blue-100 italic mt-2 border-l-2 border-blue-400 pl-3">
-                "I am not a teacher, but an awakener."
-              </p>
-            </div>
-          </div>
+        <<div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-6">
+  <div className="relative z-10">
+    <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
+      Wash Atkay • University of Turbat
+    </span>
+    <h2 className="text-2xl font-extrabold mt-1">
+      Welcome to Tezgam
+    </h2>
+    <div className="flex items-center space-x-2 mt-3">
+      <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
+      <p className="text-sm italic text-blue-100 font-medium">
+        "Bowan.Bezan.Besamj."
+      </p>
+    </div>
+  </div>
+</div>
 
           {/* Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
