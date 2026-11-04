@@ -9,28 +9,159 @@ import {
   ChevronRight, 
   Award, 
   Sparkles, 
-  Search 
+  Search,
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 import QuizModule from './components/QuizModule';
 import AssignmentUpload from './components/AssignmentUpload';
-import { auth } from './firebase'; // Firebase Auth import
+import { auth } from './firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  updateProfile, 
+  onAuthStateChanged, 
+  signOut 
+} from 'firebase/auth';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('courses');
   const [userRole, setUserRole] = useState('Teacher');
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // Auth Form State
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [authError, setAuthError] = useState('');
 
-  // Listen to Firebase Auth state for dynamic logged-in teacher/student name
+  // Listen to Firebase Auth state
   useEffect(() => {
-    const unsubscribe = auth?.onAuthStateChanged ? auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-    }) : null;
-    return () => unsubscribe && unsubscribe();
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Determine dynamic teacher display name
+  // Handle Login / Registration Submit
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      if (isRegistering) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: name });
+        setCurrentUser({ ...userCredential.user, displayName: name });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (error) {
+      setAuthError(error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout error", error);
+    }
+  };
+
   const teacherName = currentUser?.displayName || "Mr. Amir Nawaz";
 
+  // IF NOT LOGGED IN: SHOW AUTHENTICATION / REGISTRATION SCREEN
+  if (!currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-900 px-4 font-sans">
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-md w-full shadow-2xl text-white">
+          <div className="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-xl shadow-lg">
+              T
+            </div>
+            <div>
+              <h1 className="font-extrabold text-lg tracking-wide">Tezgam LMS</h1>
+              <p className="text-[10px] text-blue-400 font-medium">University of Turbat • Wash Atkay</p>
+            </div>
+          </div>
+
+          <h2 className="text-xl font-bold mb-2">
+            {isRegistering ? 'Register New Account' : 'Faculty & Student Login'}
+          </h2>
+          <p className="text-xs text-slate-400 mb-6">
+            {isRegistering 
+              ? 'Create your credentials to access university coursework modules.' 
+              : 'Enter your credentials to access your personalized portal dashboard.'}
+          </p>
+
+          {authError && (
+            <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {isRegistering && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Dr. Mahnaz Baloch"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+              <input 
+                type="email" 
+                required
+                placeholder="teacher@uot.edu.pk"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+              <input 
+                type="password" 
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <button 
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition shadow-lg shadow-blue-600/30 text-xs mt-2"
+            >
+              {isRegistering ? 'Create Account' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center border-t border-slate-700 pt-4">
+            <button 
+              onClick={() => { setIsRegistering(!isRegistering); setAuthError(''); }}
+              className="text-xs text-blue-400 hover:underline font-medium"
+            >
+              {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Register Now"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // IF LOGGED IN: SHOW DASHBOARD
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans">
       {/* SIDEBAR NAVIGATION */}
@@ -87,16 +218,25 @@ export default function App() {
           </nav>
         </div>
 
-        {/* SIDEBAR FOOTER / PROFILE */}
+        {/* SIDEBAR FOOTER / PROFILE & LOGOUT */}
         <div className="border-t border-slate-800 pt-4 space-y-3">
-          <div className="flex items-center space-x-3 px-2">
-            <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-blue-400">
-              {teacherName.charAt(0)}
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center space-x-3 overflow-hidden">
+              <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-blue-400 shrink-0">
+                {teacherName.charAt(0)}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-slate-200 truncate">{teacherName}</p>
+                <p className="text-[10px] text-slate-400">{userRole}</p>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-xs font-bold text-slate-200 truncate">{teacherName}</p>
-              <p className="text-[10px] text-slate-400">{userRole}</p>
-            </div>
+            <button
+              onClick={handleLogout}
+              title="Log Out"
+              className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>
