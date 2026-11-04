@@ -16,9 +16,10 @@ import {
   Briefcase,
   Megaphone,
   UserCheck,
-  ShieldAlert,
   CheckCircle2,
-  XCircle
+  Upload,
+  Layers,
+  Award
 } from 'lucide-react';
 import QuizModule from './components/QuizModule';
 import AssignmentUpload from './components/AssignmentUpload';
@@ -40,15 +41,15 @@ export default function App() {
   
   // Auth Form State
   const [authMode, setAuthMode] = useState('signup'); 
-  const [selectedRole, setSelectedRole] = useState('student'); // 'student' or 'teacher'
+  const [selectedRole, setSelectedRole] = useState('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [rollNumber, setRollNumber] = useState(''); // Required for students
+  const [rollNumber, setRollNumber] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Registered Students Approval Queue (Simulated DB)
+  // Student Registry (Simulated DB)
   const [studentRegistry, setStudentRegistry] = useState([
     { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', verified: true },
     { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', verified: true },
@@ -60,12 +61,12 @@ export default function App() {
     { id: 1, title: 'Web Application Development', code: 'CS-401', students: 45, instructor: 'Mr. Amir Nawaz' },
     { id: 2, title: 'Software Engineering Principles', code: 'SE-302', students: 38, instructor: 'Dr. Mahnaz Baloch' }
   ]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(courses[0]);
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseCode, setNewCourseCode] = useState('');
 
-  // Attendance State
+  // 1. Attendance Register
   const [attendanceList, setAttendanceList] = useState([
     { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', status: 'Present' },
     { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', status: 'Present' },
@@ -73,42 +74,43 @@ export default function App() {
     { id: 4, name: 'Saima Noor', roll: 'UOT-2023-CS-04', status: 'Leave' }
   ]);
 
-  // Lecture Materials State
+  // 2. Lecture Materials State
   const [lectures, setLectures] = useState([
     { id: 1, title: 'Week 1: React & Vite Architecture Setup', date: 'Nov 2026', size: '2.4 MB' },
     { id: 2, title: 'Week 2: Firebase Firestore & Auth Configuration', date: 'Nov 2026', size: '4.1 MB' }
   ]);
+  const [newLectureTitle, setNewLectureTitle] = useState('');
 
-  // Noticeboard State
+  // 3. Noticeboard State
   const [notices, setNotices] = useState([
     { id: 1, title: 'Midterm Examination Schedule Announcement', content: 'Midterms will commence from next Monday. Please review the syllabus.', date: 'Today' }
   ]);
+  const [newNoticeTitle, setNewNoticeTitle] = useState('');
+  const [newNoticeContent, setNewNoticeContent] = useState('');
 
-  // Presentation Groups State
+  // 4. Presentation Groups State
   const [presentations, setPresentations] = useState([
     { id: 1, groupName: 'Alpha Team', topic: 'React State Management in LMS', members: 'Bilal Ahmed, Ayesha Baloch', marks: '85/100' }
   ]);
+  const [newGroup, setNewGroup] = useState('');
+  const [newTopic, setNewTopic] = useState('');
+  const [newMembers, setNewMembers] = useState('');
 
-  // Notifications State
+  // 5. Notifications State
   const [notifications, setNotifications] = useState([
     { id: 1, text: 'Student Tariq Khan registered & waiting for Roll Number approval', time: 'Just now' }
   ]);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // MASTER ADMIN & TEACHER DOMAIN RESTRICTIONS
+  // Master Admin Email
   const MASTER_ADMIN_EMAIL = "amir.nawaz@uot.edu.pk";
 
-  // Check authorization rules
   const checkUserAuthorization = (userEmail, role, roll) => {
     if (userEmail === MASTER_ADMIN_EMAIL) return { authorized: true, role: 'teacher' };
-    
-    // TEACHERS: Must have official @uot.edu.pk email
     if (role === 'teacher') {
       const isOfficial = userEmail.endsWith('@uot.edu.pk');
       return { authorized: isOfficial, role: 'teacher', error: isOfficial ? null : "Teachers must use an official @uot.edu.pk email address." };
     }
-
-    // STUDENTS: Personal Gmail allowed if they provide a valid UoT Roll Number
     if (role === 'student') {
       const hasRoll = roll && roll.trim().toUpperCase().startsWith('UOT-');
       return { 
@@ -117,11 +119,9 @@ export default function App() {
         error: hasRoll ? null : "Invalid Roll Number! Students must provide a valid UoT Roll No (e.g. UOT-2024-CS-01)." 
       };
     }
-
     return { authorized: false, role: 'student', error: 'Unauthorized login attempt.' };
   };
 
-  // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -144,7 +144,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Google Sign-In Handler
   const handleGoogleSignIn = async () => {
     setAuthError('');
     setAuthLoading(true);
@@ -153,7 +152,6 @@ export default function App() {
       const result = await signInWithPopup(auth, provider);
       const isTeacher = result.user.email.endsWith('@uot.edu.pk') || result.user.email === MASTER_ADMIN_EMAIL;
       
-      // If student logs in via Google, prompt for Roll Number if needed
       if (!isTeacher && selectedRole === 'student' && (!rollNumber || !rollNumber.trim().toUpperCase().startsWith('UOT-'))) {
         setAuthError("Google Auth successful! Please enter your University Roll No below (e.g., UOT-2024-CS-01) to complete registration.");
         return;
@@ -167,7 +165,6 @@ export default function App() {
     }
   };
 
-  // Email/Password Submit Handler
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -185,7 +182,6 @@ export default function App() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name });
         
-        // Add to student registry if student
         if (selectedRole === 'student') {
           setStudentRegistry(prev => [...prev, {
             id: prev.length + 1,
@@ -239,10 +235,39 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const toggleAttendanceStatus = (id) => {
+    const statuses = ['Present', 'Absent', 'Leave', 'Late'];
+    setAttendanceList(attendanceList.map(item => {
+      if (item.id === id) {
+        const currentIndex = statuses.indexOf(item.status);
+        const nextIndex = (currentIndex + 1) % statuses.length;
+        return { ...item, status: statuses[nextIndex] };
+      }
+      return item;
+    }));
+  };
+
+  const handleCreateCourse = (e) => {
+    e.preventDefault();
+    if (!newCourseTitle) return;
+    const newCourse = {
+      id: courses.length + 1,
+      title: newCourseTitle,
+      code: newCourseCode || 'CS-501',
+      students: 1,
+      instructor: currentUser?.displayName || 'Teacher'
+    };
+    setCourses([...courses, newCourse]);
+    setSelectedCourse(newCourse);
+    setNewCourseTitle('');
+    setNewCourseCode('');
+    setShowCreateCourseModal(false);
+  };
+
   const userName = currentUser?.displayName || "User";
   const userRole = currentUser?.role || 'student';
 
-  // STRICT AUTHENTICATION & ROLL NUMBER GATE
+  // STRICT AUTHENTICATION MODAL GATE
   if (!currentUser || showAuthModal) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-900 px-4 font-sans">
@@ -258,7 +283,7 @@ export default function App() {
           </div>
 
           <p className="text-xs text-slate-500 mb-6">
-            Teachers must use an official <span className="font-bold text-slate-700">@uot.edu.pk</span> email. Students register using personal Gmail & Roll No.
+            Teachers register with official <span className="font-bold text-slate-700">@uot.edu.pk</span> email. Students register using Gmail & Roll No.
           </p>
 
           <div className="bg-slate-100 p-1 rounded-xl flex mb-6">
@@ -320,7 +345,6 @@ export default function App() {
               </div>
             )}
 
-            {/* DYNAMIC ROLL NUMBER REQUIREMENT FOR STUDENTS */}
             {selectedRole === 'student' && authMode === 'signup' && (
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">
@@ -482,7 +506,7 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT AREA */}
       <main className="flex-1 overflow-y-auto p-8">
         <header className="flex justify-between items-center mb-8 pb-4 border-b border-slate-200">
           <div className="relative w-72">
@@ -576,23 +600,38 @@ export default function App() {
           </div>
         )}
 
-        {/* COURSES TAB */}
+        {/* COURSES TAB & ALL 10 LMS MODULES VIEW */}
         {activeTab === 'courses' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold text-slate-800">
                 {userRole === 'teacher' ? 'Course Management & Teaching Modules' : 'My Enrolled Study Modules'}
               </h3>
+              {userRole === 'teacher' && (
+                <button 
+                  onClick={() => setShowCreateCourseModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Create New Course</span>
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {/* COURSE CARDS SELECTOR */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {courses.map((course) => (
                 <div 
                   key={course.id} 
                   onClick={() => setSelectedCourse(course)}
-                  className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer"
+                  className={`p-6 rounded-2xl border transition cursor-pointer ${
+                    selectedCourse?.id === course.id 
+                      ? 'bg-blue-50/40 border-blue-500 shadow-md ring-2 ring-blue-500/20' 
+                      : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                  }`}
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
                       {course.code.split('-')[0]}
                     </div>
                     <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">{course.code}</span>
@@ -604,17 +643,305 @@ export default function App() {
                       <Users className="w-3.5 h-3.5 text-blue-600" />
                       <span>{course.students} Enrolled Students</span>
                     </span>
-                    <ChevronRight className="w-4 h-4 text-blue-600" />
+                    <span className="text-blue-600 font-bold text-xs flex items-center space-x-1">
+                      <span>View Course Modules</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* 10 CORE LMS FEATURE MODULES DISPLAY */}
+            {selectedCourse && (
+              <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-10">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-5">
+                  <div>
+                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{selectedCourse.code}</span>
+                    <h3 className="text-2xl font-extrabold text-slate-900">{selectedCourse.title} - Academic Modules</h3>
+                  </div>
+                  <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200">
+                    Active Session
+                  </span>
+                </div>
+
+                {/* 1. CLASS ATTENDANCE REGISTER (WITH CSV EXPORT & CLICK STATUS TOGGLE) */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                        <UserCheck className="w-5 h-5 text-blue-600" />
+                        <span>1. Class Attendance Register</span>
+                      </h4>
+                      <p className="text-xs text-slate-500">Click any status badge to cycle between Present, Absent, Leave, or Late.</p>
+                    </div>
+                    {userRole === 'teacher' && (
+                      <button 
+                        onClick={exportAttendanceCSV}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Export CSV Report</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                        <tr>
+                          <th className="p-3.5">Roll Number</th>
+                          <th className="p-3.5">Student Name</th>
+                          <th className="p-3.5">Attendance Status (Click to Toggle)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {attendanceList.map((student) => (
+                          <tr key={student.id} className="hover:bg-slate-50/60 transition">
+                            <td className="p-3.5 font-semibold text-slate-600">{student.roll}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{student.name}</td>
+                            <td className="p-3.5">
+                              <button
+                                onClick={() => toggleAttendanceStatus(student.id)}
+                                className={`px-3 py-1.5 rounded-xl font-bold text-xs transition border shadow-xs ${
+                                  student.status === 'Present' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' :
+                                  student.status === 'Absent' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :
+                                  student.status === 'Leave' ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' :
+                                  'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                                }`}
+                              >
+                                {student.status}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 2. LECTURE NOTES & SLIDES */}
+                <div className="space-y-4 pt-6 border-t border-slate-200">
+                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <span>2. Lecture Materials & PDF Download</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {lectures.map((lec) => (
+                      <div key={lec.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-xs text-slate-800">{lec.title}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{lec.date} • {lec.size}</p>
+                        </div>
+                        <button 
+                          onClick={() => alert(`Downloading "${lec.title}" to device...`)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1 shadow-sm transition"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {userRole === 'teacher' && (
+                    <div className="flex space-x-2 mt-2">
+                      <input 
+                        type="text" 
+                        placeholder="Add new lecture title..." 
+                        value={newLectureTitle}
+                        onChange={(e) => setNewLectureTitle(e.target.value)}
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
+                      />
+                      <button 
+                        onClick={() => {
+                          if(!newLectureTitle) return;
+                          setLectures([...lectures, { id: lectures.length + 1, title: newLectureTitle, date: 'Just now', size: '1.5 MB' }]);
+                          setNewLectureTitle('');
+                        }}
+                        className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                      >
+                        Upload Lecture Note
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. CLASS NOTICEBOARD & ANNOUNCEMENTS */}
+                <div className="space-y-4 pt-6 border-t border-slate-200">
+                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                    <Megaphone className="w-5 h-5 text-blue-600" />
+                    <span>3. Class Notice Board & Broadcasts</span>
+                  </h4>
+                  <div className="space-y-3">
+                    {notices.map((n) => (
+                      <div key={n.id} className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4">
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="font-bold text-xs text-blue-950">{n.title}</p>
+                          <span className="text-[10px] font-semibold text-blue-600">{n.date}</span>
+                        </div>
+                        <p className="text-xs text-slate-600">{n.content}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {userRole === 'teacher' && (
+                    <div className="space-y-2 mt-2">
+                      <input 
+                        type="text" 
+                        placeholder="Notice Title..." 
+                        value={newNoticeTitle}
+                        onChange={(e) => setNewNoticeTitle(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                      />
+                      <textarea 
+                        placeholder="Notice Details..." 
+                        value={newNoticeContent}
+                        onChange={(e) => setNewNoticeContent(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                      />
+                      <button 
+                        onClick={() => {
+                          if(!newNoticeTitle || !newNoticeContent) return;
+                          setNotices([...notices, { id: notices.length + 1, title: newNoticeTitle, content: newNoticeContent, date: 'Just now' }]);
+                          setNewNoticeTitle('');
+                          setNewNoticeContent('');
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition"
+                      >
+                        Publish Notice
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. PRESENTATION EVALUATION & GROUPING */}
+                <div className="space-y-4 pt-6 border-t border-slate-200">
+                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
+                    <Award className="w-5 h-5 text-blue-600" />
+                    <span>4. Presentation Groups & Evaluation</span>
+                  </h4>
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                        <tr>
+                          <th className="p-3.5">Group Name</th>
+                          <th className="p-3.5">Topic</th>
+                          <th className="p-3.5">Group Members</th>
+                          <th className="p-3.5">Marks / Score</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {presentations.map((p) => (
+                          <tr key={p.id}>
+                            <td className="p-3.5 font-bold text-slate-800">{p.groupName}</td>
+                            <td className="p-3.5 text-slate-600">{p.topic}</td>
+                            <td className="p-3.5 text-slate-600">{p.members}</td>
+                            <td className="p-3.5 font-extrabold text-blue-600">{p.marks}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {userRole === 'teacher' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                      <input 
+                        type="text" 
+                        placeholder="Group Name (e.g. Beta Team)" 
+                        value={newGroup}
+                        onChange={(e) => setNewGroup(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Presentation Topic Title" 
+                        value={newTopic}
+                        onChange={(e) => setNewTopic(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Student Names / Rolls" 
+                        value={newMembers}
+                        onChange={(e) => setNewMembers(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                      />
+                      <button 
+                        onClick={() => {
+                          if(!newGroup || !newTopic) return;
+                          setPresentations([...presentations, { id: presentations.length + 1, groupName: newGroup, topic: newTopic, members: newMembers || 'Enrolled Students', marks: 'Pending' }]);
+                          setNewGroup('');
+                          setNewTopic('');
+                          setNewMembers('');
+                        }}
+                        className="md:col-span-3 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                      >
+                        Create Presentation Group
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
           </div>
         )}
 
+        {/* ASSIGNMENTS TAB */}
         {activeTab === 'assignments' && <AssignmentUpload />}
+
+        {/* QUIZZES TAB */}
         {activeTab === 'quizzes' && <QuizModule />}
       </main>
+
+      {/* CREATE COURSE MODAL */}
+      {showCreateCourseModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border">
+            <h3 className="font-extrabold text-lg text-slate-900 mb-4">Create New Course</h3>
+            <form onSubmit={handleCreateCourse} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Course Title</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Data Structures & Algorithms"
+                  value={newCourseTitle}
+                  onChange={(e) => setNewCourseTitle(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Course Code</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. CS-301"
+                  value={newCourseCode}
+                  onChange={(e) => setNewCourseCode(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs"
+                />
+              </div>
+              <div className="flex space-x-2 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowCreateCourseModal(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-600/30"
+                >
+                  Create Course
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
