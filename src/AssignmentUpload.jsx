@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle, CloudArrowUp } from 'lucide-react';
+import { Upload, FileText, CheckCircle } from 'lucide-react';
 
 export default function AssignmentUpload() {
   const [file, setFile] = useState(null);

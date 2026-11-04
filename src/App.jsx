@@ -11,8 +11,8 @@ import {
   Sparkles,
   Search
 } from 'lucide-react';
-import QuizModule from './components/QuizModule';
-import AssignmentUpload from './components/AssignmentUpload';
+import QuizModule from './QuizModule';
+import AssignmentUpload from './AssignmentUpload';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('courses');

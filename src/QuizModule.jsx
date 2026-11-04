@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, CheckCircle, Award } from 'lucide-react';
+import { Clock, Award } from 'lucide-react';
 
 export default function QuizModule() {
   const [quizStarted, setQuizStarted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30); // 30 seconds per question
+  const [timeLeft, setTimeLeft] = useState(30);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -59,9 +59,9 @@ export default function QuizModule() {
       {!quizStarted ? (
         <div className="text-center py-8">
           <Clock className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-          <h3 className="text-xl font-bold text-slate-800">Midterm Assessment: Web Engineering</h3>
+          <h3 className="text-xl font-bold text-slate-800">Timed Quizzes & Assessments</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto mt-2">
-            Strict single-attempt exam. Each question features a 30-second countdown timer. Automated grading is applied instantly upon completion.
+            Single-attempt assessments with strict countdown timers.
           </p>
           <button 
             onClick={() => setQuizStarted(true)} 
@@ -116,7 +116,7 @@ export default function QuizModule() {
           <Award className="w-16 h-16 text-emerald-600 mx-auto mb-3" />
           <h3 className="text-2xl font-bold text-slate-800">Assessment Completed!</h3>
           <p className="text-sm text-slate-600 mt-2">
-            Your response has been automatically graded and stored securely in Firestore.
+            Your response has been automatically graded and stored securely.
           </p>
           <div className="mt-4 inline-block bg-slate-100 px-6 py-3 rounded-xl border border-slate-200">
             <span className="text-xs font-semibold text-slate-500 uppercase">Final Score</span>
