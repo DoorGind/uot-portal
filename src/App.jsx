@@ -67,14 +67,14 @@ export default function App() {
   ]);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Master Student Database (Search, Update, Delete)
-  const [studentsList, setStudentsList] = useState([
-    { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', courseCode: 'CS-401', marks: '88/100', verified: true },
-    { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', courseCode: 'CS-401', marks: '92/100', verified: true },
-    { id: 3, name: 'Tariq Khan', roll: 'UOT-2024-CS-15', email: 'tariq@gmail.com', courseCode: 'SE-302', marks: '75/100', verified: false }
+  // Separate Assignment Marks Database
+  const [assignmentMarksList, setAssignmentMarksList] = useState([
+    { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', courseCode: 'CS-401', assignmentTitle: 'Assignment 1: Component State', marks: '88/100' },
+    { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', courseCode: 'CS-401', assignmentTitle: 'Assignment 1: Component State', marks: '92/100' },
+    { id: 3, name: 'Tariq Khan', roll: 'UOT-2024-CS-15', email: 'tariq@gmail.com', courseCode: 'SE-302', assignmentTitle: 'Assignment 2: System Arch', marks: '75/100' }
   ]);
-  const [editingStudentId, setEditingStudentId] = useState(null);
-  const [editStudentMarks, setEditStudentMarks] = useState('');
+  const [editingAssignId, setEditingAssignId] = useState(null);
+  const [editAssignMarks, setEditAssignMarks] = useState('');
 
   // Master Courses Database
   const [allCourses, setAllCourses] = useState([
@@ -220,14 +220,14 @@ export default function App() {
         await updateProfile(userCredential.user, { displayName: name });
         
         if (selectedRole === 'student') {
-          setStudentsList(prev => [...prev, {
+          setAssignmentMarksList(prev => [...prev, {
             id: Date.now(),
             name: name,
             roll: rollNumber.toUpperCase(),
             email: email,
             courseCode: 'CS-401',
-            marks: 'Pending',
-            verified: true
+            assignmentTitle: 'Assignment 1',
+            marks: 'Pending'
           }]);
         }
 
@@ -409,15 +409,15 @@ export default function App() {
     }));
   };
 
-  const handleDeleteStudent = (studentId) => {
-    if (window.confirm("Are you sure you want to delete this student record?")) {
-      setStudentsList(studentsList.filter(s => s.id !== studentId));
+  const handleDeleteAssignmentMark = (assignId) => {
+    if (window.confirm("Are you sure you want to delete this assignment mark record?")) {
+      setAssignmentMarksList(assignmentMarksList.filter(s => s.id !== assignId));
     }
   };
 
-  const handleSaveStudentMarks = (studentId) => {
-    setStudentsList(studentsList.map(s => s.id === studentId ? { ...s, marks: editStudentMarks } : s));
-    setEditingStudentId(null);
+  const handleSaveAssignmentMarks = (assignId) => {
+    setAssignmentMarksList(assignmentMarksList.map(s => s.id === assignId ? { ...s, marks: editAssignMarks } : s));
+    setEditingAssignId(null);
   };
 
   const handleCreateCourse = (e) => {
@@ -575,7 +575,7 @@ export default function App() {
     );
   }
 
-  const filteredStudents = studentsList.filter(st => {
+  const filteredAssignmentMarks = assignmentMarksList.filter(st => {
     if (userRole === 'student') {
       return st.email === currentUser?.email;
     }
@@ -628,14 +628,25 @@ export default function App() {
               <span>{userRole === 'teacher' ? 'My Courses & Lectures' : 'Enrolled Courses'}</span>
             </button>
 
+            {/* SEPARATE TABS FOR ASSIGNMENT MARKS & PRESENTATION MARKS */}
             <button
-              onClick={() => setActiveTab('students')}
+              onClick={() => setActiveTab('assignmentMarks')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
-                activeTab === 'students' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'
+                activeTab === 'assignmentMarks' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
-              <Users className="w-5 h-5" />
-              <span>{userRole === 'teacher' ? 'Manage Student Marks' : 'My Academic Marks'}</span>
+              <FileText className="w-5 h-5" />
+              <span>{userRole === 'teacher' ? 'Assignment Marks' : 'My Assignment Grades'}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('presentationMarks')}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'presentationMarks' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <Award className="w-5 h-5" />
+              <span>{userRole === 'teacher' ? 'Presentation Marks' : 'My Presentation Grades'}</span>
             </button>
 
             {userRole === 'teacher' && (
@@ -656,7 +667,7 @@ export default function App() {
                 activeTab === 'assignments' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
-              <FileText className="w-5 h-5" />
+              <Clock className="w-5 h-5" />
               <span>Assignments & Deadlines</span>
             </button>
 
@@ -746,7 +757,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* HERO BANNER WITH UPDATED GREETINGS */}
+        {/* HERO BANNER */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-8">
           <div className="relative z-10">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
@@ -807,15 +818,16 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'students' && (
+        {/* SEPARATED TAB 1: ASSIGNMENT MARKS */}
+        {activeTab === 'assignmentMarks' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">
-                  {userRole === 'teacher' ? 'Student Performance & Marks Management' : 'My Personal Grades'}
+                  {userRole === 'teacher' ? 'Assignment Marks Management' : 'My Assignment Grades'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  {userRole === 'teacher' ? 'Search, update, or remove student records.' : 'View your isolated academic performance.'}
+                  {userRole === 'teacher' ? 'Manage and update scores for student coursework assignments.' : 'View your isolated assignment marks.'}
                 </p>
               </div>
               {userRole === 'teacher' && (
@@ -838,23 +850,25 @@ export default function App() {
                   <tr>
                     <th className="p-4">Student Name</th>
                     <th className="p-4">Roll Number</th>
-                    <th className="p-4">Course Code</th>
-                    <th className="p-4">Evaluated Marks</th>
+                    <th className="p-4">Course</th>
+                    <th className="p-4">Assignment Title</th>
+                    <th className="p-4">Assignment Marks</th>
                     {userRole === 'teacher' && <th className="p-4">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map((st) => (
+                  {filteredAssignmentMarks.map((st) => (
                     <tr key={st.id}>
                       <td className="p-4 font-bold text-slate-800">{st.name}</td>
                       <td className="p-4 font-semibold text-blue-600">{st.roll}</td>
                       <td className="p-4 text-slate-600">{st.courseCode}</td>
+                      <td className="p-4 text-slate-600">{st.assignmentTitle}</td>
                       <td className="p-4 font-extrabold text-emerald-600">
-                        {editingStudentId === st.id ? (
+                        {editingAssignId === st.id ? (
                           <input 
                             type="text" 
-                            value={editStudentMarks}
-                            onChange={(e) => setEditStudentMarks(e.target.value)}
+                            value={editAssignMarks}
+                            onChange={(e) => setEditAssignMarks(e.target.value)}
                             className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-20"
                           />
                         ) : (
@@ -863,9 +877,9 @@ export default function App() {
                       </td>
                       {userRole === 'teacher' && (
                         <td className="p-4 flex items-center space-x-2">
-                          {editingStudentId === st.id ? (
+                          {editingAssignId === st.id ? (
                             <button 
-                              onClick={() => handleSaveStudentMarks(st.id)}
+                              onClick={() => handleSaveAssignmentMarks(st.id)}
                               className="p-1.5 bg-emerald-600 text-white rounded-lg"
                               title="Save Marks"
                             >
@@ -873,7 +887,7 @@ export default function App() {
                             </button>
                           ) : (
                             <button 
-                              onClick={() => { setEditingStudentId(st.id); setEditStudentMarks(st.marks); }}
+                              onClick={() => { setEditingAssignId(st.id); setEditAssignMarks(st.marks); }}
                               className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
                               title="Edit Marks"
                             >
@@ -881,9 +895,9 @@ export default function App() {
                             </button>
                           )}
                           <button 
-                            onClick={() => handleDeleteStudent(st.id)}
+                            onClick={() => handleDeleteAssignmentMark(st.id)}
                             className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                            title="Delete Student"
+                            title="Delete Record"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -894,6 +908,69 @@ export default function App() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* SEPARATED TAB 2: PRESENTATION MARKS */}
+        {activeTab === 'presentationMarks' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {userRole === 'teacher' ? 'Presentation Marks & Group Evaluation' : 'My Presentation Grades'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {userRole === 'teacher' ? 'Evaluate group presentations, topics, and assign marks.' : 'View your group presentation evaluations.'}
+                </p>
+              </div>
+            </div>
+
+            {visibleCourses.map(course => (
+              <div key={course.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <div>
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{course.code}</span>
+                    <h4 className="font-bold text-sm text-slate-800 mt-1">{course.title} - Presentation Evaluation</h4>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                      <tr>
+                        <th className="p-3.5">Group No</th>
+                        <th className="p-3.5">Group Name</th>
+                        <th className="p-3.5">Presentation Topic</th>
+                        <th className="p-3.5">Assigned Members</th>
+                        <th className="p-3.5">Presentation Marks / Score</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {(course.presentations || []).map((p) => (
+                        <tr key={p.id}>
+                          <td className="p-3.5 font-bold text-blue-600">{p.groupNumber}</td>
+                          <td className="p-3.5 font-bold text-slate-800">{p.groupName}</td>
+                          <td className="p-3.5 text-slate-600">{p.topic}</td>
+                          <td className="p-3.5 text-slate-600">{p.members}</td>
+                          <td className="p-3.5 font-extrabold text-emerald-600">
+                            {userRole === 'teacher' ? (
+                              <input 
+                                type="text" 
+                                value={p.marks}
+                                onChange={(e) => updatePresentationMarks(p.id, e.target.value)}
+                                className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-24"
+                              />
+                            ) : (
+                              p.marks
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -1140,90 +1217,6 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="space-y-4 pt-6 border-t border-slate-200">
-                  <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
-                    <Award className="w-5 h-5 text-blue-600" />
-                    <span>Presentation Groups & Live Evaluation</span>
-                  </h4>
-
-                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                        <tr>
-                          <th className="p-3.5">Group No</th>
-                          <th className="p-3.5">Group Name</th>
-                          <th className="p-3.5">Presentation Topic</th>
-                          <th className="p-3.5">Assigned Members</th>
-                          <th className="p-3.5">Marks / Score</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {(activeCourse.presentations || []).map((p) => (
-                          <tr key={p.id}>
-                            <td className="p-3.5 font-bold text-blue-600">{p.groupNumber}</td>
-                            <td className="p-3.5 font-bold text-slate-800">{p.groupName}</td>
-                            <td className="p-3.5 text-slate-600">{p.topic}</td>
-                            <td className="p-3.5 text-slate-600">{p.members}</td>
-                            <td className="p-3.5 font-extrabold text-emerald-600">
-                              {userRole === 'teacher' ? (
-                                <input 
-                                  type="text" 
-                                  value={p.marks}
-                                  onChange={(e) => updatePresentationMarks(p.id, e.target.value)}
-                                  className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-24"
-                                />
-                              ) : (
-                                p.marks
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {userRole === 'teacher' && (
-                    <form onSubmit={handleAddPresentationGroup} className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
-                      <input 
-                        type="text" 
-                        placeholder="Group No (e.g. Group 01)" 
-                        value={newGroupNum}
-                        onChange={(e) => setNewGroupNum(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                      />
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Group Name" 
-                        value={newGroupName}
-                        onChange={(e) => setNewGroupName(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                      />
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Topic Name" 
-                        value={newTopic}
-                        onChange={(e) => setNewTopic(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                      />
-                      <input 
-                        type="text" 
-                        placeholder="Student Names" 
-                        value={newMembers}
-                        onChange={(e) => setNewMembers(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                      />
-                      <button 
-                        type="submit"
-                        className="md:col-span-4 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition"
-                      >
-                        Create Presentation Group
-                      </button>
-                    </form>
-                  )}
-                </div>
-
               </div>
             )}
           </div>
@@ -1244,29 +1237,18 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {studentsList.map((st) => (
+                  {assignmentMarksList.map((st) => (
                     <tr key={st.id}>
                       <td className="p-4 font-bold text-slate-800">{st.name}</td>
                       <td className="p-4 font-semibold text-blue-600">{st.roll}</td>
                       <td className="p-4 text-slate-600">{st.email}</td>
                       <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
-                          st.verified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                        }`}>
-                          {st.verified ? 'Approved' : 'Pending Verification'}
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                          Approved
                         </span>
                       </td>
                       <td className="p-4">
-                        {!st.verified && (
-                          <button 
-                            onClick={() => {
-                              setStudentsList(studentsList.map(s => s.id === st.id ? { ...s, verified: true } : s));
-                            }}
-                            className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-[11px]"
-                          >
-                            Approve Student
-                          </button>
-                        )}
+                        <span className="text-slate-400 text-xs">Verified</span>
                       </td>
                     </tr>
                   ))}
