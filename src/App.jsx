@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import QuizModule from './components/QuizModule';
 import AssignmentUpload from './components/AssignmentUpload';
+import AIChatBot from './components/AIChatBot'; // Imported Step 2 AI ChatBot
 import { auth } from './firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -628,7 +629,6 @@ export default function App() {
               <span>{userRole === 'teacher' ? 'My Courses & Lectures' : 'Enrolled Courses'}</span>
             </button>
 
-            {/* SEPARATE TABS FOR ASSIGNMENT MARKS & PRESENTATION MARKS */}
             <button
               onClick={() => setActiveTab('assignmentMarks')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
@@ -1260,6 +1260,13 @@ export default function App() {
 
         {activeTab === 'quizzes' && <QuizModule courseCode={activeCourse?.code} />}
       </main>
+
+      {/* FLOATING AI CHATBOT WIDGET */}
+      <AIChatBot 
+        userRole={userRole} 
+        userName={userName} 
+        activeCourseCode={activeCourse?.code} 
+      />
 
       {showCreateCourseModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
