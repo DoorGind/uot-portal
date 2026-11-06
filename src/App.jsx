@@ -60,14 +60,14 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
 
-  // 6. Teacher Notification Hub
+  // Teacher Notification Hub
   const [notifications, setNotifications] = useState([
     { id: 1, title: 'New Submission', text: 'Bilal Ahmed submitted Assignment 1 (CS-401)', time: '10 mins ago', read: false },
     { id: 2, title: 'Roll Approval Request', text: 'Tariq Khan registered with UOT-2024-CS-15', time: '1 hour ago', read: false }
   ]);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // 10. Master Student Database (Search, Update, Delete)
+  // Master Student Database (Search, Update, Delete)
   const [studentsList, setStudentsList] = useState([
     { id: 1, name: 'Bilal Ahmed', roll: 'UOT-2023-CS-01', email: 'bilal@gmail.com', courseCode: 'CS-401', marks: '88/100', verified: true },
     { id: 2, name: 'Ayesha Baloch', roll: 'UOT-2023-CS-02', email: 'ayesha@gmail.com', courseCode: 'CS-401', marks: '92/100', verified: true },
@@ -117,7 +117,7 @@ export default function App() {
     }
   ]);
 
-  // 5. Assignments with Countdown Timers
+  // Assignments with Countdown Timers
   const [assignments, setAssignments] = useState([
     { id: 1, courseCode: 'CS-401', title: 'Assignment 1: Component State Design', deadline: '2026-11-28T23:59', totalMarks: 100 },
     { id: 2, courseCode: 'SE-302', title: 'Assignment 2: System Architecture Diagram', deadline: '2026-11-30T17:00', totalMarks: 50 }
@@ -280,7 +280,6 @@ export default function App() {
 
   const activeCourse = visibleCourses.find(c => c.id === selectedCourseId) || visibleCourses[0];
 
-  // 2. Attendance Status Toggle (Present, Absent, Leave, Late)
   const toggleAttendanceStatus = (studentId) => {
     if (!activeCourse) return;
     const statuses = ['Present', 'Absent', 'Leave', 'Late'];
@@ -300,7 +299,6 @@ export default function App() {
     }));
   };
 
-  // 2. Export & Import CSV Attendance
   const exportAttendanceCSV = () => {
     if (!activeCourse) return;
     const csvContent = "data:text/csv;charset=utf-8," + 
@@ -333,7 +331,6 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // 4 & 8. Upload PDF/Slides/Word Docs
   const handleAddLecture = (e) => {
     e.preventDefault();
     if (!newLectureTitle || !activeCourse) return;
@@ -355,7 +352,6 @@ export default function App() {
     setNewLectureTitle('');
   };
 
-  // 5. Assignment Deadline Timer Calculator
   const calculateTimeRemaining = (deadlineStr) => {
     const total = Date.parse(deadlineStr) - Date.parse(new Date());
     if (total <= 0) return { expired: true, text: 'Deadline Passed' };
@@ -380,7 +376,6 @@ export default function App() {
     setNewAssignmentDeadline('');
   };
 
-  // 7. Presentation Group Creation & Live Grading
   const handleAddPresentationGroup = (e) => {
     e.preventDefault();
     if (!newGroupName || !newTopic || !activeCourse) return;
@@ -414,7 +409,6 @@ export default function App() {
     }));
   };
 
-  // 10. Student Record Operations (Delete & Update Marks)
   const handleDeleteStudent = (studentId) => {
     if (window.confirm("Are you sure you want to delete this student record?")) {
       setStudentsList(studentsList.filter(s => s.id !== studentId));
@@ -448,7 +442,6 @@ export default function App() {
     setShowCreateCourseModal(false);
   };
 
-  // AUTHENTICATION MODAL GATE
   if (!currentUser || showAuthModal) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-900 px-4 font-sans">
@@ -582,10 +575,9 @@ export default function App() {
     );
   }
 
-  // Filtered Student List for Search Operations
   const filteredStudents = studentsList.filter(st => {
     if (userRole === 'student') {
-      return st.email === currentUser?.email; // 10. Students see only their own info
+      return st.email === currentUser?.email;
     }
     return st.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) || 
            st.roll.toLowerCase().includes(studentSearchQuery.toLowerCase());
@@ -615,7 +607,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 9. Sequential Tabs */}
           <nav className="space-y-1.5">
             <button
               onClick={() => setActiveTab('home')}
@@ -681,7 +672,6 @@ export default function App() {
           </nav>
         </div>
 
-        {/* 13. DEVELOPER FOOTER */}
         <div className="border-t border-slate-800 pt-4 space-y-3">
           <div className="px-2">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Developed by: Amir Nawaz</p>
@@ -716,7 +706,6 @@ export default function App() {
             />
           </div>
 
-          {/* 6. Teacher Notification Bell */}
           <div className="flex items-center space-x-4 relative">
             {userRole === 'teacher' && (
               <div className="relative">
@@ -757,23 +746,25 @@ export default function App() {
           </div>
         </header>
 
-        {/* 12 & 14. HERO GREETING BANNER WITH DYNAMIC TEACHER NAME */}
+        {/* HERO BANNER WITH UPDATED GREETINGS */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-8">
           <div className="relative z-10">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-              Welcome to Tezgam LMS • University of Turbat
+              Wash Atkay • University of Turbat
             </span>
             <h2 className="text-2xl font-extrabold mt-1">
-              {userRole === 'teacher' ? `Welcome back, Prof. ${userName}!` : `Welcome to Study Portal, ${userName}!`}
+              Wash Atkay Amir nawaz!
             </h2>
-            <p className="text-xs text-blue-100 mt-1">
-              "I am not a teacher, but an awakener." — Manage courses, grade presentations, and track assignments seamlessly.
-            </p>
+            <div className="flex items-center space-x-2 mt-3">
+              <div className="w-1 h-4 bg-blue-400 rounded-full"></div>
+              <p className="text-sm font-semibold text-blue-100 tracking-wide">
+                "Lets Learn Together"
+              </p>
+            </div>
           </div>
           <Sparkles className="w-36 h-36 text-white/5 absolute -right-6 -bottom-6 pointer-events-none" />
         </div>
 
-        {/* 9. HOME DASHBOARD TAB */}
         {activeTab === 'home' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -801,7 +792,6 @@ export default function App() {
                     <div>
                       <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{c.code}</span>
                       <p className="font-bold text-xs text-slate-800 mt-1">{c.title}</p>
-                      {/* 3. Total Students Enrolled */}
                       <p className="text-[11px] text-slate-500">{c.studentsCount} Students Enrolled</p>
                     </div>
                     <button 
@@ -817,7 +807,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 10. SEARCH, DELETE, AND UPDATE STUDENT MARKS */}
         {activeTab === 'students' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -908,7 +897,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. ASSIGNMENTS WITH DEADLINE COUNTDOWN REMINDERS */}
         {activeTab === 'assignments' && (
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-800">Assignments & Live Reminders</h3>
@@ -967,7 +955,6 @@ export default function App() {
           </div>
         )}
 
-        {/* COURSES & ISOLATED MODULES */}
         {activeTab === 'courses' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -980,7 +967,7 @@ export default function App() {
                   className="bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center space-x-2"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>1. Create New Course</span>
+                  <span>Create New Course</span>
                 </button>
               )}
             </div>
@@ -1002,7 +989,6 @@ export default function App() {
                   <h4 className="font-bold text-slate-800 text-base">{course.title}</h4>
                   <p className="text-xs text-slate-500 mt-1">Instructor: {course.instructor}</p>
                   
-                  {/* 3. Total Enrolled Students */}
                   <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
                     <span className="text-slate-500 font-medium flex items-center space-x-1">
                       <Users className="w-3.5 h-3.5 text-blue-600" />
@@ -1033,13 +1019,12 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* 2. ATTENDANCE REGISTER (Present, Absent, Leave, Late + CSV Export/Import) */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
                       <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
                         <UserCheck className="w-5 h-5 text-blue-600" />
-                        <span>2. Class Attendance Register</span>
+                        <span>Class Attendance Register</span>
                       </h4>
                       <p className="text-xs text-slate-500">Click any status to cycle between Present, Absent, Leave, or Late.</p>
                     </div>
@@ -1096,11 +1081,10 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 4 & 8. LECTURES & NOTES UPLOAD (PDF, Slides, Word Docs) */}
                 <div className="space-y-4 pt-6 border-t border-slate-200">
                   <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
                     <FileText className="w-5 h-5 text-blue-600" />
-                    <span>4. Course Notes & Lecture Downloads ({activeCourse.code})</span>
+                    <span>Course Notes & Lecture Downloads ({activeCourse.code})</span>
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1156,11 +1140,10 @@ export default function App() {
                   )}
                 </div>
 
-                {/* 7. PRESENTATION GROUPS & MARKS EVALUATION */}
                 <div className="space-y-4 pt-6 border-t border-slate-200">
                   <h4 className="font-bold text-base text-slate-800 flex items-center space-x-2">
                     <Award className="w-5 h-5 text-blue-600" />
-                    <span>7. Presentation Groups & Live Evaluation</span>
+                    <span>Presentation Groups & Live Evaluation</span>
                   </h4>
 
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl">
@@ -1296,7 +1279,6 @@ export default function App() {
         {activeTab === 'quizzes' && <QuizModule courseCode={activeCourse?.code} />}
       </main>
 
-      {/* CREATE COURSE MODAL */}
       {showCreateCourseModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border">
